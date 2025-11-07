@@ -33,7 +33,8 @@ impl AutoInputManager {
                         thread::sleep(Duration::from_millis(delay));
                     }
                 } else if auto_input_list.len() > 0 {
-                    println!("Target window is not active. Skipping auto input.");
+                    AppState::clear_auto_input();
+                    println!("Target window is not active. Clear auto input to stop this message.");
                 }
 
                 is_active = current_active;
