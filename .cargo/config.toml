@@ -1,0 +1,13 @@
+[build]
+rustflags = [
+  "-Zlocation-detail=none",
+  "-Zfmt-debug=none",
+]
+
+[profile.release]
+panic = "immediate-abort"
+
+[unstable]
+build-std = ["std", "panic_abort"]
+build-std-features = ["default", "optimize_for_size"]
+panic-immediate-abort = true
