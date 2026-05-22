@@ -5,8 +5,6 @@
 
 GameMacro 让你为任意 Windows 游戏挂上**自定义组合键 → 自动输入指令**的宏。按一次开始循环输入，再按一次停止。配置一次，整盘游戏不用再手敲。
 
-> 旧用户：之前的 `hotkeys.toml` 在首次启动 daemon 时会被自动迁移为 `gamemacro.toml`，无需手动操作。
-
 ## 功能特性
 
 - **全局热键监听** — 在任何窗口都能响应热键
@@ -91,7 +89,6 @@ description  = "召唤刑天"
 - `window is active` — 目标窗口已激活，热键可用
 - `window is inactive` — 目标窗口未激活，热键暂停
 - `Configuration changed, reloading...` — 检测到 `gamemacro.toml` 修改并已重载
-- `Migrated config: hotkeys.toml -> gamemacro.toml` — 自动迁移旧配置
 
 ## 开发
 
@@ -156,9 +153,6 @@ A: 不需要。GUI 只读写 `gamemacro.toml` 配置文件，daemon 通过文件
 
 ### Q: 录制热键时按下组合键不响应？
 A: 让 GUI 窗口保持聚焦再按下组合键。GUI 仅监听本窗口的键盘事件，不开全局键盘 hook，因此不会与 daemon 抢事件，也不需要管理员权限。
-
-### Q: 我的旧 `hotkeys.toml` 怎么办？
-A: 把它放在新的 `gamemacro-daemon.exe` 同目录下，daemon 启动时会自动 rename 为 `gamemacro.toml`。控制台会输出一行迁移日志。
 
 ### Q: 修改配置后 daemon 没自动加载？
 A: 检查 daemon 控制台是否输出 `Configuration changed, reloading...`。如果 GUI 还没保存，配置不会变更（V0.2 起改为自动保存）。
