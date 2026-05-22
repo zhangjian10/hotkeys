@@ -34,10 +34,8 @@ export interface WindowInfo {
   title: string;
 }
 
-/** 修饰键候选 */
 export const ALL_MODIFIERS = ["Ctrl", "Alt", "Shift", "Meta"] as const;
 
-/** 触发键候选 */
 export const ALL_TRIGGERS = [
   "BackQuote",
   "Num0",
@@ -90,6 +88,13 @@ export const ALL_TRIGGERS = [
   "Z",
 ] as const;
 
+/** 把内部触发键名转成对小白友好的键盘符号（例如 BackQuote → \`、Num1 → 1） */
+export function displayKey(key: string): string {
+  if (key === "BackQuote") return "`";
+  if (key.startsWith("Num") && key.length === 4) return key.slice(3);
+  return key;
+}
+
 export async function loadConfig(): Promise<ConfigBundle> {
   return invoke<ConfigBundle>("load_config");
 }
@@ -98,17 +103,24 @@ export async function saveConfig(config: AppConfig): Promise<void> {
   await invoke("save_config", { config });
 }
 
-/** 在文件管理器中定位 hotkeys.toml */
 export async function revealConfig(): Promise<void> {
   await invoke("reveal_config");
 }
 
-/** 枚举当前可见的顶层窗口 */
 export async function listWindows(): Promise<WindowInfo[]> {
   return invoke<WindowInfo[]>("list_windows");
 }
 
-/** 创建一个新的空 Profile */
+/** 取当前前台窗口标题；用于"窗口匹配"页实时反馈 */
+export async function currentForegroundTitle(): Promise<string> {
+  return invoke<string>("current_foreground_title");
+}
+
+/** 试一下：把 input 文本通过模拟键盘输入到当前焦点窗口 */
+export async function tryInput(text: string): Promise<void> {
+  await invoke("try_input", { text });
+}
+
 export function emptyProfile(name = "新建配置"): Profile {
   return {
     name,
@@ -119,7 +131,6 @@ export function emptyProfile(name = "新建配置"): Profile {
   };
 }
 
-/** 创建一个新的空 AppConfig */
 export function emptyConfig(): AppConfig {
   return { profiles: [] };
 }

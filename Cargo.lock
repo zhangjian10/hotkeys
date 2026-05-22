@@ -1357,6 +1357,7 @@ dependencies = [
 name = "hotkeys-gui"
 version = "0.1.0"
 dependencies = [
+ "enigo",
  "hotkeys-core",
  "serde",
  "tauri",
