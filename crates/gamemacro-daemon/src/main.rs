@@ -9,8 +9,8 @@ mod window;
 
 use auto_input::AutoInputManager;
 use elevation::ensure_elevated;
+use gamemacro_core::Config;
 use hotkey::HotkeyManager;
-use hotkeys_core::Config;
 use notify::{EventKind, RecursiveMode, Watcher};
 use state::AppState;
 use std::path::Path;
@@ -34,16 +34,33 @@ fn load_config(config_path: &str, is_watcher: bool) {
     }
 }
 
+/// 一次性迁移：若工作目录下存在旧的 hotkeys.toml 而新的 gamemacro.toml 不存在，
+/// 重命名旧文件为新名字并打印迁移日志。重命名失败仅警告，不阻止启动。
+fn migrate_legacy_config(new_path: &str, old_path: &str) {
+    let new_p = Path::new(new_path);
+    let old_p = Path::new(old_path);
+    if !new_p.exists() && old_p.exists() {
+        match std::fs::rename(old_p, new_p) {
+            Ok(()) => println!("Migrated config: {} -> {}", old_path, new_path),
+            Err(e) => eprintln!(
+                "Warning: failed to migrate {} -> {}: {}",
+                old_path, new_path, e
+            ),
+        }
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("========================================");
-    println!("    Hotkeys Helper v{}    ", env!("CARGO_PKG_VERSION"));
+    println!("    GameMacro Daemon v{}    ", env!("CARGO_PKG_VERSION"));
     println!("========================================");
     println!();
 
     ensure_elevated();
     println!();
 
-    let config_path = "hotkeys.toml";
+    let config_path = "gamemacro.toml";
+    migrate_legacy_config(config_path, "hotkeys.toml");
     load_config(config_path, false);
 
     let (tx, rx) = std::sync::mpsc::channel();

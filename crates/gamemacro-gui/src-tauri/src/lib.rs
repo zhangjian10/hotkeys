@@ -1,9 +1,9 @@
-//! Tauri 后端：把 hotkeys-core 的 Config 暴露成 invoke 命令。
+//! Tauri 后端：把 gamemacro-core 的 Config 暴露成 invoke 命令。
 
 use std::path::PathBuf;
 
 use enigo::{Direction::Click, Enigo, Key, Keyboard, Settings};
-use hotkeys_core::Config;
+use gamemacro_core::Config;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -21,14 +21,14 @@ pub struct WindowInfo {
     pub title: String,
 }
 
-/// 解析配置文件路径：优先 GUI exe 同目录的 hotkeys.toml。
+/// 解析配置文件路径：优先 GUI exe 同目录的 gamemacro.toml。
 fn resolve_config_path() -> PathBuf {
     if let Ok(exe) = std::env::current_exe()
         && let Some(parent) = exe.parent()
     {
-        return parent.join("hotkeys.toml");
+        return parent.join("gamemacro.toml");
     }
-    PathBuf::from("hotkeys.toml")
+    PathBuf::from("gamemacro.toml")
 }
 
 #[tauri::command]

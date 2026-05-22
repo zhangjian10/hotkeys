@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "crates/hotkeys-core",
-    "crates/hotkeys-daemon",
-    "crates/hotkeys-gui/src-tauri",
+    "crates/gamemacro-core",
+    "crates/gamemacro-daemon",
+    "crates/gamemacro-gui/src-tauri",
 ]
 resolver = "2"
 

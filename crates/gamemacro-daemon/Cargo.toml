@@ -1,14 +1,14 @@
 [package]
-name = "hotkeys-daemon"
+name = "gamemacro-daemon"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "hotkeys-daemon"
+name = "gamemacro-daemon"
 path = "src/main.rs"
 
 [dependencies]
-hotkeys-core = { path = "../hotkeys-core" }
+gamemacro-core = { path = "../gamemacro-core" }
 enigo = { version = "0.6.1", default-features = false }
 lazy_static = { version = "1.5.0", default-features = false }
 notify = "8.2.0"

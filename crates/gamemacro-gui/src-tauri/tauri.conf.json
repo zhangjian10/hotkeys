@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Hotkeys GUI",
+  "productName": "GameMacro",
   "version": "0.1.0",
-  "identifier": "com.hotkeys.gui",
+  "identifier": "com.gamemacro.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Hotkeys 配置",
+        "title": "GameMacro",
         "width": 960,
         "height": 640,
         "minWidth": 760,

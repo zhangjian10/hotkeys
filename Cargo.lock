@@ -1000,6 +1000,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamemacro-core"
+version = "0.1.0"
+dependencies = [
+ "rdev",
+ "serde",
+ "toml 1.1.2+spec-1.1.0",
+]
+
+[[package]]
+name = "gamemacro-daemon"
+version = "0.1.0"
+dependencies = [
+ "enigo",
+ "gamemacro-core",
+ "lazy_static",
+ "notify",
+ "rdev",
+ "winapi",
+ "winres",
+]
+
+[[package]]
+name = "gamemacro-gui"
+version = "0.1.0"
+dependencies = [
+ "enigo",
+ "gamemacro-core",
+ "serde",
+ "tauri",
+ "tauri-build",
+ "winapi",
+]
+
+[[package]]
 name = "gdk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1330,40 +1364,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
-name = "hotkeys-core"
-version = "0.1.0"
-dependencies = [
- "rdev",
- "serde",
- "toml 1.1.2+spec-1.1.0",
-]
-
-[[package]]
-name = "hotkeys-daemon"
-version = "0.1.0"
-dependencies = [
- "enigo",
- "hotkeys-core",
- "lazy_static",
- "notify",
- "rdev",
- "winapi",
- "winres",
-]
-
-[[package]]
-name = "hotkeys-gui"
-version = "0.1.0"
-dependencies = [
- "enigo",
- "hotkeys-core",
- "serde",
- "tauri",
- "tauri-build",
- "winapi",
-]
 
 [[package]]
 name = "html5ever"

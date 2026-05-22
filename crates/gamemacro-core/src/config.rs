@@ -2,7 +2,7 @@ use std::{fmt, fs, io, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-const DEFAULT_CONFIG_TOML: &str = include_str!("../default_hotkeys.toml");
+const DEFAULT_CONFIG_TOML: &str = include_str!("../default_config.toml");
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HotkeyConfig {

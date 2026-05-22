@@ -1,4 +1,4 @@
-use hotkeys_core::{Config, Profile};
+use gamemacro_core::{Config, Profile};
 use lazy_static::lazy_static;
 use rdev::Key as RdevKey;
 use std::{

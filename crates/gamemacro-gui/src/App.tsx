@@ -311,7 +311,7 @@ export default function App() {
   /* ------------------------- 渲染 ------------------------- */
   return (
     <div className={styles.root}>
-      <TitleBar title="Hotkeys 配置" />
+      <TitleBar title="GameMacro" />
       <div className={styles.body}>
         <Sidebar
           profiles={config.profiles}

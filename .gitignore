@@ -4,11 +4,11 @@
 **/target/
 
 # 前端
-crates/hotkeys-gui/node_modules/
-crates/hotkeys-gui/dist/
-crates/hotkeys-gui/src-tauri/gen/
-crates/hotkeys-gui/src-tauri/target/
+crates/gamemacro-gui/node_modules/
+crates/gamemacro-gui/dist/
+crates/gamemacro-gui/src-tauri/gen/
+crates/gamemacro-gui/src-tauri/target/
 
 # 构建产物
 *.crash.log
-hotkeys-gui.crash.log
+gamemacro-gui.crash.log

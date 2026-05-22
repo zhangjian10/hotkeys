@@ -1,5 +1,5 @@
 use crate::state::AppState;
-use hotkeys_core::string_to_rdev_key;
+use gamemacro_core::string_to_rdev_key;
 use rdev::{Event, EventType, Key as RdevKey};
 
 pub struct HotkeyManager;
