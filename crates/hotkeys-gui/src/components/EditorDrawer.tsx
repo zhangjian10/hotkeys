@@ -117,14 +117,15 @@ export function EditorDrawer({
 
             <Field
               label="输入内容"
-              hint="支持多行；换行会按游戏内 Enter 处理。录制组合键时编辑区会临时锁定。"
+              hint="支持多行；换行 = 游戏内 Enter。"
             >
               <Textarea
                 value={hotkey.input_string}
                 disabled={recording}
                 onChange={(_, d) => onChange({ input_string: d.value })}
                 spellCheck={false}
-                resize="vertical"
+                resize="none"
+                rows={6}
                 className={styles.drawerTextarea}
               />
             </Field>

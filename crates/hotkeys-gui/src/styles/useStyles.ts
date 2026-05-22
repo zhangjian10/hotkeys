@@ -20,7 +20,7 @@ export const useStyles = makeStyles({
     display: "flex",
     alignItems: "stretch",
     backgroundColor: tokens.colorNeutralBackground3,
-    color: tokens.colorNeutralForeground2,
+    color: tokens.colorNeutralForeground1,
     userSelect: "none",
   },
   titleBarLeft: {
@@ -51,43 +51,52 @@ export const useStyles = makeStyles({
     flexShrink: 0,
   },
   /**
-   * 覆盖 Fluent Button：
-   * - 撑满标题栏高度 (32px)
-   * - 加宽到 Win11 标准 46px
-   * - 去圆角、去边框、去 min-width
-   * - 内部图标颜色随 button 当前颜色变化
+   * Windows 11 原生 caption 按钮 —— 使用原生 <button>，没有 Fluent Button 的
+   * minHeight / padding / focus-ring 干扰：
+   * - 46px × 32px（系统默认 caption button 尺寸）
+   * - hover：rgba(0,0,0,0.0578)（WinUI Caption Button 资源字典）
+   * - active：rgba(0,0,0,0.0373)
+   * - 去焦点描边（鼠标点击场景），仅键盘聚焦保留可见 outline 以满足可访问性
    */
-  titleBarBtn: {
+  captionBtn: {
+    appearance: "none",
+    margin: 0,
+    padding: 0,
+    width: "46px",
     height: "32px",
-    minWidth: "46px",
-    minHeight: "32px",
-    paddingInline: 0,
-    paddingBlock: 0,
-    borderRadius: 0,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     border: "none",
-    backgroundColor: "transparent",
-    color: tokens.colorNeutralForeground2,
+    background: "transparent",
+    color: tokens.colorNeutralForeground1,
+    cursor: "default",
+    outline: "none",
     "&:hover": {
-      backgroundColor: tokens.colorSubtleBackgroundHover,
+      backgroundColor: "rgba(0, 0, 0, 0.0578)",
       color: tokens.colorNeutralForeground1,
-      border: "none",
     },
-    "&:hover:active": {
-      backgroundColor: tokens.colorSubtleBackgroundPressed,
+    "&:active": {
+      backgroundColor: "rgba(0, 0, 0, 0.0373)",
       color: tokens.colorNeutralForeground1,
-      border: "none",
+    },
+    "&:focus-visible": {
+      outline: `1px solid ${tokens.colorStrokeFocus2}`,
+      outlineOffset: "-1px",
     },
   },
-  titleBarClose: {
+  /**
+   * 关闭按钮的 hover/active 重写：Win11 用 #C42B1C / #B5271B 红 + 白图标。
+   * 注意非 hover 态下图标颜色仍跟随容器（深灰），与原生一致。
+   */
+  captionBtnClose: {
     "&:hover": {
-      backgroundColor: tokens.colorPaletteRedBackground3,
-      color: tokens.colorNeutralForegroundOnBrand,
-      border: "none",
+      backgroundColor: "#C42B1C",
+      color: "#FFFFFF",
     },
-    "&:hover:active": {
-      backgroundColor: tokens.colorPaletteRedForeground3,
-      color: tokens.colorNeutralForegroundOnBrand,
-      border: "none",
+    "&:active": {
+      backgroundColor: "#B5271B",
+      color: "#FFFFFF",
     },
   },
   body: {
@@ -571,8 +580,12 @@ export const useStyles = makeStyles({
     paddingBlock: "4px",
   },
   drawerTextarea: {
-    minHeight: "220px",
     fontFamily: tokens.fontFamilyMonospace,
+    /* 默认 6 行左右；用户可手动拖动 textarea 右下角调整 */
+    "& textarea": {
+      minHeight: "120px",
+      maxHeight: "240px",
+    },
   },
 
   keyChip: {
