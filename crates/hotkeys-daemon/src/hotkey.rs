@@ -12,10 +12,8 @@ impl HotkeyManager {
 
         match event.event_type {
             EventType::KeyPress(key) => {
-                // 更新修饰键状态
                 AppState::update_modifier_key_state(key, true);
 
-                // 检查是否匹配任何热键配置
                 if let Some(input_str) = Self::find_matching_hotkey(key) {
                     println!("Hotkey triggered: {}", input_str.replace('\n', " "));
                     if AppState::contains_auto_input(&input_str) {
@@ -34,7 +32,6 @@ impl HotkeyManager {
                 }
             }
             EventType::KeyRelease(key) => {
-                // 更新修饰键状态
                 AppState::update_modifier_key_state(key, false);
             }
             _ => {}
@@ -42,17 +39,15 @@ impl HotkeyManager {
     }
 
     fn find_matching_hotkey(trigger_key: RdevKey) -> Option<String> {
-        let config = AppState::get_config();
+        let profile = AppState::get_active_profile()?;
         let modifier_keys = AppState::get_modifier_keys_state();
 
-        for hotkey_config in &config.hotkeys {
-            // 转换配置中的键名到 RdevKey
+        for hotkey_config in &profile.hotkeys {
             if let (Some(config_modifier), Some(config_trigger)) = (
                 string_to_rdev_key(&hotkey_config.modifier_key),
                 string_to_rdev_key(&hotkey_config.trigger_key),
             ) {
                 if config_trigger == trigger_key {
-                    // 检查修饰键是否被按下
                     if let Some(&pressed) = modifier_keys.get(&config_modifier) {
                         if pressed {
                             return Some(hotkey_config.input_string.clone());
@@ -66,24 +61,28 @@ impl HotkeyManager {
 
     pub fn print_hotkey_configs() {
         let config = AppState::get_config();
-        println!("current hotkey configurations:");
-        println!("keywords to identify window: {:?}", config.window_keywords);
-        println!(
-            "auto input interval (secs): {}",
-            config.auto_input_interval_secs
-        );
-        println!("input delay (millis): {}", config.input_delay_millis);
-        println!("hotkeys:");
-        for (i, hotkey) in config.hotkeys.iter().enumerate() {
-            let description = hotkey.description.as_deref().unwrap_or("no description");
+        println!("loaded {} profile(s):", config.profiles.len());
+        for (pi, profile) in config.profiles.iter().enumerate() {
+            println!();
             println!(
-                "  {}. {} + {} -> {} ({})",
-                i + 1,
-                hotkey.modifier_key,
-                hotkey.trigger_key,
-                hotkey.input_string.replace('\n', " "),
-                description
+                "  [{}] {}  (keywords: {:?})",
+                pi, profile.name, profile.window_keywords
             );
+            println!(
+                "      auto interval: {}s, key delay: {}ms",
+                profile.auto_input_interval_secs, profile.input_delay_millis
+            );
+            for (i, hk) in profile.hotkeys.iter().enumerate() {
+                let desc = hk.description.as_deref().unwrap_or("no description");
+                println!(
+                    "      {}. {} + {} -> {} ({})",
+                    i + 1,
+                    hk.modifier_key,
+                    hk.trigger_key,
+                    hk.input_string.replace('\n', " "),
+                    desc
+                );
+            }
         }
         println!();
     }

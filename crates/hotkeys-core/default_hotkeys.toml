@@ -1,32 +1,34 @@
+[[profiles]]
+name = "魔兽争霸"
 window_keywords = ["warcraft iii"]
 auto_input_interval_secs = 3
 input_delay_millis = 50
 
-[[hotkeys]]
+[[profiles.hotkeys]]
 modifier_key = "Ctrl"
 trigger_key = "X"
 input_string = """-ss"""
 description = "召唤刑天"
 
-[[hotkeys]]
+[[profiles.hotkeys]]
 modifier_key = "Ctrl"
 trigger_key = "Z"
 input_string = """-aa"""
 description = "召唤项羽"
 
-[[hotkeys]]
+[[profiles.hotkeys]]
 modifier_key = "Ctrl"
 trigger_key = "W"
 input_string = """-ww"""
 description = "召唤狼"
 
-[[hotkeys]]
+[[profiles.hotkeys]]
 modifier_key = "Ctrl"
 trigger_key = "D"
 input_string = """-dd"""
 description = "召唤兵"
 
-[[hotkeys]]
+[[profiles.hotkeys]]
 modifier_key = "Ctrl"
 trigger_key = "N"
 input_string = """-rmoon"""

@@ -1361,6 +1361,7 @@ dependencies = [
  "serde",
  "tauri",
  "tauri-build",
+ "winapi",
 ]
 
 [[package]]

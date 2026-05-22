@@ -21,5 +21,8 @@ tauri = { version = "2", features = [] }
 
 serde = { version = "1", features = ["derive"] }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["winuser", "windef", "minwindef"] }
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

@@ -1,28 +1,25 @@
-use hotkeys_core::Config;
+use hotkeys_core::{Config, Profile};
 use lazy_static::lazy_static;
 use rdev::Key as RdevKey;
 use std::{
     collections::HashMap,
     sync::{
         Mutex,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicI64, Ordering},
     },
 };
 
 lazy_static! {
-    // 使用静态变量存储魔兽窗口状态
+    // 当前是否有任意 profile 命中（即"激活"）
     pub static ref WARCRAFT_ACTIVE: AtomicBool = AtomicBool::new(false);
 
-    // 如果需要存储上一次状态，可以使用 Mutex
-    pub static ref LAST_STATUS: Mutex<bool> = Mutex::new(false);
+    // 当前激活的 profile 在 Config.profiles 中的索引；-1 表示没有命中
+    pub static ref ACTIVE_PROFILE_INDEX: AtomicI64 = AtomicI64::new(-1);
 
-    // 使用 Mutex 来存储自动输入的字符串
+    // 自动输入字符串列表
     pub static ref AUTO_INPUT: Mutex<Vec<String>> = Mutex::new(vec![]);
 
-    // 标志位，用于检测 Alt 键是否被按下
-    pub static ref ALT_PRESSED: AtomicBool = AtomicBool::new(false);
-
-    // 修饰键状态映射
+    // 修饰键状态
     pub static ref MODIFIER_KEYS_PRESSED: Mutex<HashMap<RdevKey, bool>> = Mutex::new(HashMap::new());
 
     // 全局配置
@@ -31,7 +28,6 @@ lazy_static! {
 
 pub struct AppState;
 
-#[warn(dead_code)]
 impl AppState {
     pub fn is_active() -> bool {
         WARCRAFT_ACTIVE.load(Ordering::SeqCst)
@@ -41,7 +37,6 @@ impl AppState {
         let last_status = WARCRAFT_ACTIVE.load(Ordering::SeqCst);
         WARCRAFT_ACTIVE.store(active, Ordering::SeqCst);
 
-        // 如果状态发生变化，打印提示信息
         if active != last_status {
             if active {
                 println!("window is active");
@@ -51,8 +46,39 @@ impl AppState {
         }
     }
 
+    /// 设置当前激活的 profile 索引；-1 表示无
+    pub fn set_active_profile(index: Option<usize>) {
+        let prev = ACTIVE_PROFILE_INDEX.load(Ordering::SeqCst);
+        let next = index.map(|i| i as i64).unwrap_or(-1);
+        ACTIVE_PROFILE_INDEX.store(next, Ordering::SeqCst);
+
+        if prev != next {
+            match index {
+                Some(i) => {
+                    if let Some(p) = CONFIG.lock().unwrap().profiles.get(i) {
+                        println!("Profile activated: {} (#{})", p.name, i);
+                    }
+                }
+                None => println!("No profile active"),
+            }
+        }
+    }
+
+    /// 取出当前激活的 Profile（克隆出来，避免持锁）
+    pub fn get_active_profile() -> Option<Profile> {
+        let idx = ACTIVE_PROFILE_INDEX.load(Ordering::SeqCst);
+        if idx < 0 {
+            return None;
+        }
+        CONFIG
+            .lock()
+            .unwrap()
+            .profiles
+            .get(idx as usize)
+            .cloned()
+    }
+
     pub fn update_modifier_key_state(key: RdevKey, pressed: bool) {
-        // 检查是否是修饰键
         match key {
             RdevKey::Alt
             | RdevKey::ControlLeft

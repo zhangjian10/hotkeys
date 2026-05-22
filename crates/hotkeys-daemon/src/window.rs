@@ -24,44 +24,30 @@ impl WindowManager {
         Ok(())
     }
 
-    pub fn is_window_active() -> bool {
+    /// 取当前前台窗口标题（小写化）
+    fn current_title_lower() -> Option<String> {
         unsafe {
             let hwnd = GetForegroundWindow();
             if hwnd.is_null() {
-                return false;
+                return None;
             }
-
-            // 获取窗口标题
             let mut title: Vec<u16> = vec![0; MAX_PATH];
             let len = GetWindowTextW(hwnd, title.as_mut_ptr(), title.len() as i32);
-            if len > 0 {
-                let title = OsString::from_wide(&title[..len as usize]);
-                let title_str = title.to_string_lossy().to_lowercase();
-
-                // 从配置中获取关键词
-                let config = AppState::get_config();
-                for keyword in &config.window_keywords {
-                    if keyword.contains('%') {
-                        // 模糊匹配：只要标题包含去掉%的关键字即可
-                        let fuzzy_keyword = keyword.replace('%', "").to_lowercase();
-                        if title_str.contains(&fuzzy_keyword) {
-                            return true;
-                        }
-                    } else {
-                        // 精确匹配
-                        if title_str.eq(&keyword.to_lowercase()) {
-                            return true;
-                        }
-                    }
-                }
+            if len <= 0 {
+                return None;
             }
-            false
+            let title = OsString::from_wide(&title[..len as usize]);
+            Some(title.to_string_lossy().to_lowercase())
         }
     }
 
+    /// 刷新激活状态：根据当前前台窗口标题在所有 profile 中找匹配
     pub fn refresh_state() {
-        let current_status = Self::is_window_active();
-        AppState::set_active(current_status);
+        let title = Self::current_title_lower();
+        let cfg = AppState::get_config();
+        let active_idx = title.as_deref().and_then(|t| cfg.active_profile_index(t));
+        AppState::set_active(active_idx.is_some());
+        AppState::set_active_profile(active_idx);
     }
 }
 

@@ -6,38 +6,38 @@ pub struct AutoInputManager;
 impl AutoInputManager {
     pub fn start() {
         thread::spawn(|| {
-            let delay = {
-                let config = AppState::get_config();
-                config.input_delay_millis
-            };
-
-            let interval = {
-                let config = AppState::get_config();
-                config.auto_input_interval_secs
-            };
-
-            let mut is_active = WindowManager::is_window_active();
+            // 默认参数（无 profile 命中时使用）
+            const FALLBACK_INTERVAL_SECS: u64 = 3;
+            const FALLBACK_DELAY_MS: u64 = 50;
 
             loop {
-                thread::sleep(Duration::from_secs(interval));
+                // 每次循环都从当前激活 profile 拿最新参数；不命中时退回默认值
+                let (interval, delay) = match AppState::get_active_profile() {
+                    Some(p) => (p.auto_input_interval_secs, p.input_delay_millis),
+                    None => (FALLBACK_INTERVAL_SECS, FALLBACK_DELAY_MS),
+                };
 
-                let current_active = WindowManager::is_window_active();
-                if current_active == is_active && !current_active {
-                    continue;
-                }
+                thread::sleep(Duration::from_secs(interval.max(1)));
 
+                let is_active = AppState::is_active();
                 let auto_input_list = AppState::get_auto_input_list();
-                if current_active && let Ok(mut input_manager) = InputManager::new() {
-                    for input_str in auto_input_list.iter() {
-                        input_manager.input_text(input_str);
-                        thread::sleep(Duration::from_millis(delay));
+
+                if is_active {
+                    if !auto_input_list.is_empty() {
+                        if let Ok(mut input_manager) = InputManager::new() {
+                            for input_str in auto_input_list.iter() {
+                                input_manager.input_text(input_str);
+                                thread::sleep(Duration::from_millis(delay));
+                            }
+                        }
                     }
-                } else if auto_input_list.len() > 0 {
+                } else if !auto_input_list.is_empty() {
                     AppState::clear_auto_input();
-                    println!("Target window is not active. Clear auto input to stop this message.");
+                    println!("Target window is not active. Cleared auto input.");
                 }
 
-                is_active = current_active;
+                // 防止 daemon 启动时尚未触发 SetWinEventHook 回调
+                let _ = WindowManager::refresh_state;
             }
         });
     }

@@ -12,6 +12,13 @@ import {
   Body1,
   Button,
   Caption1,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
   Drawer,
   DrawerBody,
   DrawerHeader,
@@ -22,15 +29,19 @@ import {
   InteractionTag,
   InteractionTagPrimary,
   InteractionTagSecondary,
+  Menu,
+  MenuItem,
+  MenuList,
+  MenuPopover,
+  MenuTrigger,
   Option,
   SpinButton,
   Subtitle1,
   Subtitle2,
-  TabList,
   Tab,
+  TabList,
   type TabValue,
   TagGroup,
-  Text,
   Textarea,
   Title2,
   ToggleButton,
@@ -47,24 +58,32 @@ import {
 } from "@fluentui/react-components";
 import {
   Add20Regular,
+  AppFolder20Regular,
   ArrowReset20Regular,
   Delete20Regular,
   Dismiss20Regular,
   FolderOpen20Regular,
   Keyboard20Regular,
   KeyboardLayoutFloat20Regular,
+  MoreHorizontal20Regular,
   Record20Filled,
   Record20Regular,
   Save20Regular,
   Search20Regular,
   Timer20Regular,
   Window20Regular,
+  WindowConsole20Regular,
 } from "@fluentui/react-icons";
 import {
   ALL_MODIFIERS,
   ALL_TRIGGERS,
   type AppConfig,
   type HotkeyConfig,
+  type Profile,
+  type WindowInfo,
+  emptyConfig,
+  emptyProfile,
+  listWindows,
   loadConfig,
   revealConfig,
   saveConfig,
@@ -90,17 +109,8 @@ const NAV_ITEMS: NavItemDef[] = [
   { id: "timing", title: "输入节奏", icon: <Timer20Regular /> },
 ];
 
-function emptyConfig(): AppConfig {
-  return {
-    window_keywords: [],
-    hotkeys: [],
-    auto_input_interval_secs: 3,
-    input_delay_millis: 50,
-  };
-}
-
 /* ============================================================================
- * 样式（按 Win11 设置规范：Body 13px / Title 28px、行高 56、组圆角 7、padding 36/24）
+ * 样式
  * ========================================================================== */
 
 const useStyles = makeStyles({
@@ -111,8 +121,6 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground3,
     color: tokens.colorNeutralForeground1,
   },
-
-  /* 主体：左导航 + 右内容 */
   body: {
     display: "grid",
     gridTemplateColumns: "260px minmax(0, 1fr)",
@@ -121,7 +129,7 @@ const useStyles = makeStyles({
     overflow: "hidden",
   },
 
-  /* ================= 左导航 ================= */
+  /* ================= Sidebar：Profile 列表 + 设置子页签 ================= */
   sidebar: {
     display: "flex",
     flexDirection: "column",
@@ -130,14 +138,79 @@ const useStyles = makeStyles({
     paddingInline: "8px",
     backgroundColor: tokens.colorNeutralBackground3,
   },
-  sidebarSearch: {
+  brand: {
     paddingInline: "8px",
-    paddingBottom: "12px",
+    marginBottom: "16px",
   },
+  /* 分组小标签 */
+  navGroupLabel: {
+    paddingInline: "12px",
+    paddingBlock: "6px",
+    color: tokens.colorNeutralForeground3,
+    fontSize: "11.5px",
+    fontWeight: tokens.fontWeightSemibold,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  /* Profile 单项 */
+  profileItem: {
+    appearance: "none",
+    background: "transparent",
+    border: "none",
+    width: "100%",
+    minHeight: "36px",
+    paddingInline: "12px",
+    borderRadius: tokens.borderRadiusMedium,
+    display: "flex",
+    alignItems: "center",
+    columnGap: "8px",
+    color: tokens.colorNeutralForeground2,
+    cursor: "pointer",
+    textAlign: "left",
+    "&:hover": {
+      backgroundColor: tokens.colorSubtleBackgroundHover,
+      color: tokens.colorNeutralForeground1,
+    },
+  },
+  profileItemActive: {
+    backgroundColor: tokens.colorNeutralBackground1,
+    color: tokens.colorNeutralForeground1,
+    boxShadow: tokens.shadow2,
+  },
+  profileItemBox: {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    columnGap: "8px",
+  },
+  profileItemMain: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+  },
+  profileItemTitle: {
+    fontSize: "13px",
+    fontWeight: tokens.fontWeightMedium,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  profileItemMeta: {
+    fontSize: "11px",
+    color: tokens.colorNeutralForeground3,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  /* 子页签 */
   navTabList: {
     rowGap: "2px",
+    paddingTop: "8px",
   },
-  /* Win11 NavigationView item: 36px 高、icon 20px、左指示条 3×16px */
   navTab: {
     height: "36px",
     borderRadius: tokens.borderRadiusMedium,
@@ -178,7 +251,7 @@ const useStyles = makeStyles({
     whiteSpace: "nowrap",
   },
 
-  /* ================= 右内容区 ================= */
+  /* ================= 内容区 ================= */
   content: {
     display: "flex",
     flexDirection: "column",
@@ -186,15 +259,13 @@ const useStyles = makeStyles({
     minHeight: 0,
     overflow: "hidden",
     backgroundColor: tokens.colorNeutralBackground1,
-    /* Win11 设置: 整个内容区有自己的圆角和阴影感 */
     borderTopLeftRadius: "8px",
     borderBottomLeftRadius: "8px",
     boxShadow: tokens.shadow4,
     margin: "8px 8px 8px 0",
-    overflowY: "hidden",
   },
 
-  /* dirty 时出现的"未保存更改"提示条，吸顶 */
+  /* dirty 时出现的吸顶提示条 */
   dirtyBar: {
     display: "flex",
     alignItems: "center",
@@ -205,56 +276,74 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     flexShrink: 0,
   },
-  dirtyText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  dirtyActions: {
+  dirtyText: { flex: 1, minWidth: 0 },
+  dirtyActions: { display: "flex", columnGap: "8px", flexShrink: 0 },
+
+  /* Profile header：当前正在编辑的 profile 名 + 元信息 */
+  profileHeader: {
     display: "flex",
-    columnGap: "8px",
+    alignItems: "center",
+    columnGap: "12px",
+    paddingInline: "36px",
+    paddingTop: "20px",
     flexShrink: 0,
   },
-
-  scroll: {
-    flex: 1,
-    minHeight: 0,
-    overflowY: "auto",
+  profileHeaderIcon: {
+    width: "36px",
+    height: "36px",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "8px",
+    backgroundColor: tokens.colorBrandBackground2,
+    color: tokens.colorBrandForeground1,
   },
+  profileHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+  },
+  profileHeaderTitle: {
+    fontSize: "18px",
+    fontWeight: tokens.fontWeightSemibold,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  profileHeaderMeta: {
+    fontSize: "12px",
+    color: tokens.colorNeutralForeground3,
+  },
+
+  scroll: { flex: 1, minHeight: 0, overflowY: "auto" },
   scrollInner: {
     width: "100%",
     maxWidth: "1024px",
     paddingInline: "36px",
-    paddingTop: "32px",
+    paddingTop: "20px",
     paddingBottom: "48px",
     display: "flex",
     flexDirection: "column",
     rowGap: "20px",
   },
 
-  /* PageHeader: Win11 是 Title2 (28px) + 描述 14px / Caption */
   pageHeader: {
     display: "flex",
     flexDirection: "column",
     rowGap: "4px",
     marginBottom: "8px",
   },
-  pageSubtitle: {
-    color: tokens.colorNeutralForeground3,
-  },
+  pageSubtitle: { color: tokens.colorNeutralForeground3 },
 
-  /* 组标题：Win11 用 14/600，不是大写 */
   groupTitle: {
     paddingInline: "4px",
     marginBottom: "4px",
     color: tokens.colorNeutralForeground1,
   },
 
-  /* 设置组：纯白圆角卡片，行间用极浅 divider */
-  group: {
-    display: "flex",
-    flexDirection: "column",
-    rowGap: "8px",
-  },
+  group: { display: "flex", flexDirection: "column", rowGap: "8px" },
   groupCard: {
     backgroundColor: tokens.colorNeutralBackground1,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
@@ -262,7 +351,6 @@ const useStyles = makeStyles({
     overflow: "hidden",
   },
 
-  /* 设置行：Win11 风 56px 高、左 icon、中文字、右控件 */
   row: {
     display: "flex",
     alignItems: "center",
@@ -310,7 +398,6 @@ const useStyles = makeStyles({
     columnGap: "8px",
   },
 
-  /* 标签云 */
   tagGroup: {
     display: "flex",
     flexWrap: "wrap",
@@ -324,8 +411,7 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
   },
 
-  /* ================= Hotkeys 列表行 ================= */
-  /* 单行展开式（取代 split）：每条热键独占一行 */
+  /* Hotkeys 列表行 */
   hkRow: {
     display: "flex",
     alignItems: "center",
@@ -334,9 +420,7 @@ const useStyles = makeStyles({
     paddingInline: "16px",
     paddingBlock: "10px",
     cursor: "pointer",
-    "&:hover": {
-      backgroundColor: tokens.colorSubtleBackgroundHover,
-    },
+    "&:hover": { backgroundColor: tokens.colorSubtleBackgroundHover },
   },
   hkComboBox: {
     display: "flex",
@@ -367,13 +451,7 @@ const useStyles = makeStyles({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  hkActions: {
-    display: "flex",
-    columnGap: "4px",
-    flexShrink: 0,
-  },
-
-  /* 列表上方搜索条 */
+  hkActions: { display: "flex", columnGap: "4px", flexShrink: 0 },
   hkSearch: {
     paddingInline: "16px",
     paddingTop: "12px",
@@ -383,7 +461,6 @@ const useStyles = makeStyles({
     columnGap: "12px",
   },
 
-  /* 空状态 */
   empty: {
     display: "flex",
     flexDirection: "column",
@@ -394,8 +471,18 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     textAlign: "center",
   },
+  emptyState: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    rowGap: "12px",
+    paddingInline: "36px",
+    color: tokens.colorNeutralForeground3,
+    textAlign: "center",
+  },
 
-  /* ================= 编辑抽屉 ================= */
   drawerCombo: {
     display: "flex",
     flexDirection: "column",
@@ -408,7 +495,6 @@ const useStyles = makeStyles({
     columnGap: "12px",
   },
 
-  /* ================= 键帽 ================= */
   keyChip: {
     display: "inline-flex",
     alignItems: "center",
@@ -430,9 +516,37 @@ const useStyles = makeStyles({
     border: `1px solid ${tokens.colorBrandStroke2}`,
     color: tokens.colorBrandForeground1,
   },
-  keyPlus: {
-    color: tokens.colorNeutralForeground3,
-    fontSize: "12px",
+  keyPlus: { color: tokens.colorNeutralForeground3, fontSize: "12px" },
+
+  /* 窗口选择对话框 */
+  windowList: {
+    maxHeight: "360px",
+    overflowY: "auto",
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: "6px",
+  },
+  windowItem: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: "12px",
+    paddingInline: "12px",
+    paddingBlock: "10px",
+    cursor: "pointer",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke3}`,
+    "&:hover": { backgroundColor: tokens.colorSubtleBackgroundHover },
+    "&:last-child": { borderBottom: "none" },
+  },
+  windowItemActive: {
+    backgroundColor: tokens.colorBrandBackground2,
+    "&:hover": { backgroundColor: tokens.colorBrandBackground2Hover },
+  },
+  windowItemTitle: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: "13px",
   },
 });
 
@@ -450,11 +564,13 @@ export default function App() {
   const [config, setConfig] = useState<AppConfig>(emptyConfig);
   const [saved, setSaved] = useState<AppConfig>(emptyConfig);
   const [path, setPath] = useState("");
+  const [activeProfile, setActiveProfile] = useState(0);
   const [section, setSection] = useState<SectionId>("hotkeys");
   const [editingHotkey, setEditingHotkey] = useState(-1);
   const [recording, setRecording] = useState(false);
   const [keywordDraft, setKeywordDraft] = useState("");
   const [hotkeyQuery, setHotkeyQuery] = useState("");
+  const [windowPickerOpen, setWindowPickerOpen] = useState(false);
 
   const cancelRecRef = useRef<(() => void) | null>(null);
 
@@ -463,24 +579,33 @@ export default function App() {
     [config, saved],
   );
 
+  const profile = useMemo<Profile | null>(() => {
+    if (activeProfile < 0 || activeProfile >= config.profiles.length)
+      return null;
+    return config.profiles[activeProfile] ?? null;
+  }, [config.profiles, activeProfile]);
+
   const editing = useMemo<HotkeyConfig | null>(() => {
-    if (editingHotkey < 0 || editingHotkey >= config.hotkeys.length) return null;
-    return config.hotkeys[editingHotkey] ?? null;
-  }, [config.hotkeys, editingHotkey]);
+    if (!profile) return null;
+    if (editingHotkey < 0 || editingHotkey >= profile.hotkeys.length)
+      return null;
+    return profile.hotkeys[editingHotkey] ?? null;
+  }, [profile, editingHotkey]);
 
   const duplicateCombo = useMemo(() => {
-    if (!editing) return false;
-    return config.hotkeys.some(
+    if (!profile || !editing) return false;
+    return profile.hotkeys.some(
       (h, i) =>
         i !== editingHotkey &&
         h.modifier_key === editing.modifier_key &&
         h.trigger_key === editing.trigger_key,
     );
-  }, [config.hotkeys, editing, editingHotkey]);
+  }, [profile, editing, editingHotkey]);
 
   const visibleHotkeys = useMemo(() => {
+    if (!profile) return [];
     const q = hotkeyQuery.trim().toLowerCase();
-    return config.hotkeys
+    return profile.hotkeys
       .map((hotkey, index) => ({ hotkey, index }))
       .filter(({ hotkey, index }) => {
         if (!q) return true;
@@ -491,9 +616,9 @@ export default function App() {
           hotkey.input_string.toLowerCase().includes(q)
         );
       });
-  }, [config.hotkeys, hotkeyQuery]);
+  }, [profile, hotkeyQuery]);
 
-  /* ---------------- toast ---------------- */
+  /* ---------------- Toast ---------------- */
   const flash = useCallback(
     (kind: ToastKind, text: string) => {
       dispatchToast(
@@ -515,6 +640,7 @@ export default function App() {
         setConfig(bundle.config);
         setSaved(structuredClone(bundle.config));
         setPath(bundle.path);
+        setActiveProfile(bundle.config.profiles.length > 0 ? 0 : -1);
       } catch (e) {
         flash("error", `加载失败：${formatErr(e)}`);
       }
@@ -544,10 +670,14 @@ export default function App() {
   const doReset = useCallback(() => {
     stopRecording();
     setConfig(structuredClone(saved));
+    setActiveProfile((cur) =>
+      saved.profiles.length === 0
+        ? -1
+        : Math.min(Math.max(cur, 0), saved.profiles.length - 1),
+    );
     flash("info", "已恢复到上次保存");
   }, [saved, stopRecording, flash]);
 
-  /* Ctrl+S */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (recording) return;
@@ -560,27 +690,78 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [recording, doSave]);
 
-  /* ---------------- 关键词 ---------------- */
-  function addKeyword() {
-    const v = keywordDraft.trim();
-    if (!v) return;
-    if (config.window_keywords.includes(v)) {
-      flash("info", "该关键词已存在");
-      return;
-    }
-    setConfig((c) => ({ ...c, window_keywords: [...c.window_keywords, v] }));
-    setKeywordDraft("");
+  /* ---------------- Profile 操作 ---------------- */
+  function patchProfile(patch: Partial<Profile>) {
+    if (activeProfile < 0) return;
+    setConfig((c) => ({
+      ...c,
+      profiles: c.profiles.map((p, i) =>
+        i === activeProfile ? { ...p, ...patch } : p,
+      ),
+    }));
   }
 
-  function removeKeyword(idx: number) {
-    if (config.window_keywords.length <= 1) {
-      flash("info", "至少需要保留 1 个窗口关键词");
+  function addProfile() {
+    if (recording) {
+      flash("info", "录制中，请先结束录制");
+      return;
+    }
+    const name = `配置 ${config.profiles.length + 1}`;
+    setConfig((c) => ({ ...c, profiles: [...c.profiles, emptyProfile(name)] }));
+    setActiveProfile(config.profiles.length);
+    setSection("window");
+  }
+
+  function removeProfile(idx: number) {
+    if (recording) {
+      flash("info", "录制中暂不能删除配置");
+      return;
+    }
+    if (config.profiles.length <= 1) {
+      flash("info", "至少保留 1 个配置");
       return;
     }
     setConfig((c) => ({
       ...c,
-      window_keywords: c.window_keywords.filter((_, i) => i !== idx),
+      profiles: c.profiles.filter((_, i) => i !== idx),
     }));
+    setActiveProfile((cur) => {
+      const newLen = config.profiles.length - 1;
+      if (cur === idx) return Math.max(0, idx - 1);
+      if (cur > idx) return cur - 1;
+      return Math.min(cur, newLen - 1);
+    });
+  }
+
+  function renameProfile(idx: number, name: string) {
+    setConfig((c) => ({
+      ...c,
+      profiles: c.profiles.map((p, i) => (i === idx ? { ...p, name } : p)),
+    }));
+  }
+
+  /* ---------------- 关键词 ---------------- */
+  function addKeyword(value?: string) {
+    const v = (value ?? keywordDraft).trim();
+    if (!v) return;
+    if (!profile) return;
+    if (profile.window_keywords.includes(v)) {
+      flash("info", "该关键词已存在");
+      return;
+    }
+    patchProfile({ window_keywords: [...profile.window_keywords, v] });
+    setKeywordDraft("");
+  }
+
+  function removeKeyword(idx: number) {
+    if (!profile) return;
+    if (profile.window_keywords.length <= 1) {
+      flash("info", "至少需要保留 1 个窗口关键词");
+      return;
+    }
+    patchProfile({
+      window_keywords: profile.window_keywords.filter((_, i) => i !== idx),
+    });
   }
 
   /* ---------------- 热键 ---------------- */
@@ -589,11 +770,11 @@ export default function App() {
       flash("info", "录制中，请先结束录制");
       return;
     }
-    const newIndex = config.hotkeys.length;
-    setConfig((c) => ({
-      ...c,
+    if (!profile) return;
+    const newIndex = profile.hotkeys.length;
+    patchProfile({
       hotkeys: [
-        ...c.hotkeys,
+        ...profile.hotkeys,
         {
           modifier_key: "Ctrl",
           trigger_key: "A",
@@ -601,7 +782,7 @@ export default function App() {
           description: null,
         },
       ],
-    }));
+    });
     setSection("hotkeys");
     setEditingHotkey(newIndex);
   }
@@ -611,49 +792,54 @@ export default function App() {
       flash("info", "录制中暂不能删除热键");
       return;
     }
-    setConfig((c) => ({
-      ...c,
-      hotkeys: c.hotkeys.filter((_, idx) => idx !== i),
-    }));
+    if (!profile) return;
+    patchProfile({
+      hotkeys: profile.hotkeys.filter((_, idx) => idx !== i),
+    });
     if (editingHotkey === i) setEditingHotkey(-1);
     else if (editingHotkey > i) setEditingHotkey((cur) => cur - 1);
   }
 
   function patchEditing(patch: Partial<HotkeyConfig>) {
-    setConfig((c) => ({
-      ...c,
-      hotkeys: c.hotkeys.map((h, i) =>
+    if (!profile) return;
+    patchProfile({
+      hotkeys: profile.hotkeys.map((h, i) =>
         i === editingHotkey ? { ...h, ...patch } : h,
       ),
-    }));
+    });
   }
 
   function toggleRecord() {
+    if (!profile) return;
     if (editingHotkey < 0) return;
     if (recording) {
       stopRecording();
       return;
     }
     setRecording(true);
-    const target = editingHotkey;
+    const targetProfileIdx = activeProfile;
+    const targetIdx = editingHotkey;
     cancelRecRef.current = startRecording((res) => {
       setRecording(false);
       cancelRecRef.current = null;
       if (res.kind === "captured") {
         setConfig((c) => {
-          if (target >= c.hotkeys.length) return c;
-          return {
-            ...c,
-            hotkeys: c.hotkeys.map((h, i) =>
-              i === target
-                ? {
-                    ...h,
-                    modifier_key: res.combo.modifier ?? "Ctrl",
-                    trigger_key: res.combo.trigger,
-                  }
-                : h,
-            ),
-          };
+          const profiles = c.profiles.map((p, pi) => {
+            if (pi !== targetProfileIdx) return p;
+            return {
+              ...p,
+              hotkeys: p.hotkeys.map((h, hi) =>
+                hi === targetIdx
+                  ? {
+                      ...h,
+                      modifier_key: res.combo.modifier ?? "Ctrl",
+                      trigger_key: res.combo.trigger,
+                    }
+                  : h,
+              ),
+            };
+          });
+          return { ...c, profiles };
         });
         flash("success", "组合键已录入");
       } else if (res.kind === "unsupported") {
@@ -679,9 +865,18 @@ export default function App() {
       <div className={styles.body}>
         <Sidebar
           styles={styles}
-          current={section}
+          profiles={config.profiles}
+          activeProfile={activeProfile}
+          section={section}
           path={path}
-          onSelect={setSection}
+          onSelectProfile={(i) => {
+            setActiveProfile(i);
+            setEditingHotkey(-1);
+          }}
+          onAddProfile={addProfile}
+          onRenameProfile={renameProfile}
+          onRemoveProfile={removeProfile}
+          onSelectSection={setSection}
           onReveal={reveal}
         />
 
@@ -695,47 +890,62 @@ export default function App() {
             />
           )}
 
-          <div className={styles.scroll}>
-            <div className={styles.scrollInner}>
-              {section === "hotkeys" && (
-                <HotkeysPage
-                  styles={styles}
-                  hotkeys={visibleHotkeys}
-                  total={config.hotkeys.length}
-                  query={hotkeyQuery}
-                  recording={recording}
-                  onChangeQuery={setHotkeyQuery}
-                  onAdd={addHotkey}
-                  onEdit={setEditingHotkey}
-                  onDelete={deleteHotkey}
-                />
-              )}
-
-              {section === "window" && (
-                <WindowPage
-                  styles={styles}
-                  keywords={config.window_keywords}
-                  draft={keywordDraft}
-                  onChangeDraft={setKeywordDraft}
-                  onAdd={addKeyword}
-                  onRemove={removeKeyword}
-                />
-              )}
-
-              {section === "timing" && (
-                <TimingPage
-                  styles={styles}
-                  config={config}
-                  onChangeInterval={(v) =>
-                    setConfig((c) => ({ ...c, auto_input_interval_secs: v }))
-                  }
-                  onChangeDelay={(v) =>
-                    setConfig((c) => ({ ...c, input_delay_millis: v }))
-                  }
-                />
-              )}
+          {profile ? (
+            <>
+              <ProfileHeader styles={styles} profile={profile} />
+              <div className={styles.scroll}>
+                <div className={styles.scrollInner}>
+                  {section === "hotkeys" && (
+                    <HotkeysPage
+                      styles={styles}
+                      hotkeys={visibleHotkeys}
+                      total={profile.hotkeys.length}
+                      query={hotkeyQuery}
+                      recording={recording}
+                      onChangeQuery={setHotkeyQuery}
+                      onAdd={addHotkey}
+                      onEdit={setEditingHotkey}
+                      onDelete={deleteHotkey}
+                    />
+                  )}
+                  {section === "window" && (
+                    <WindowPage
+                      styles={styles}
+                      profile={profile}
+                      draft={keywordDraft}
+                      onChangeDraft={setKeywordDraft}
+                      onAdd={addKeyword}
+                      onRemove={removeKeyword}
+                      onPickWindow={() => setWindowPickerOpen(true)}
+                    />
+                  )}
+                  {section === "timing" && (
+                    <TimingPage
+                      styles={styles}
+                      profile={profile}
+                      onChangeInterval={(v) =>
+                        patchProfile({ auto_input_interval_secs: v })
+                      }
+                      onChangeDelay={(v) =>
+                        patchProfile({ input_delay_millis: v })
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className={styles.emptyState}>
+              <AppFolder20Regular style={{ fontSize: 28 }} />
+              <Subtitle1>还没有任何配置</Subtitle1>
+              <Caption1>
+                点击左侧「+ 新建配置」创建一个，例如"魔兽争霸"或"真三国无双"。
+              </Caption1>
+              <Button appearance="primary" icon={<Add20Regular />} onClick={addProfile}>
+                新建配置
+              </Button>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -750,13 +960,23 @@ export default function App() {
         onToggleRecord={toggleRecord}
       />
 
+      <WindowPickerDialog
+        styles={styles}
+        open={windowPickerOpen}
+        onOpenChange={setWindowPickerOpen}
+        onPick={(title) => {
+          addKeyword(title);
+          setWindowPickerOpen(false);
+        }}
+      />
+
       <Toaster toasterId={toasterId} position="bottom-end" pauseOnHover />
     </div>
   );
 }
 
 /* ============================================================================
- * 左侧 NavigationView
+ * Sidebar
  * ========================================================================== */
 
 interface SectionProps {
@@ -765,36 +985,72 @@ interface SectionProps {
 
 function Sidebar({
   styles,
-  current,
+  profiles,
+  activeProfile,
+  section,
   path,
-  onSelect,
+  onSelectProfile,
+  onAddProfile,
+  onRenameProfile,
+  onRemoveProfile,
+  onSelectSection,
   onReveal,
 }: SectionProps & {
-  current: SectionId;
+  profiles: Profile[];
+  activeProfile: number;
+  section: SectionId;
   path: string;
-  onSelect: (id: SectionId) => void;
+  onSelectProfile: (i: number) => void;
+  onAddProfile: () => void;
+  onRenameProfile: (i: number, name: string) => void;
+  onRemoveProfile: (i: number) => void;
+  onSelectSection: (id: SectionId) => void;
   onReveal: () => void;
 }) {
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.sidebarSearch}>
-        <Subtitle1 style={{ paddingInline: 4, marginBottom: 4 }} block>
-          Hotkeys
-        </Subtitle1>
-        <Caption1
-          style={{ paddingInline: 4, color: tokens.colorNeutralForeground3 }}
-        >
+      <div className={styles.brand}>
+        <Subtitle1 block>Hotkeys</Subtitle1>
+        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
           配置中心
         </Caption1>
       </div>
 
+      <div className={styles.navGroupLabel}>
+        <span>配置</span>
+        <Tooltip content="新建配置" relationship="label">
+          <Button
+            appearance="subtle"
+            size="small"
+            icon={<Add20Regular />}
+            onClick={onAddProfile}
+            aria-label="新建配置"
+          />
+        </Tooltip>
+      </div>
+
+      {profiles.map((p, i) => (
+        <ProfileItem
+          key={i}
+          styles={styles}
+          profile={p}
+          active={i === activeProfile}
+          onSelect={() => onSelectProfile(i)}
+          onRename={(name) => onRenameProfile(i, name)}
+          onRemove={() => onRemoveProfile(i)}
+        />
+      ))}
+
+      <div className={styles.navGroupLabel} style={{ marginTop: 12 }}>
+        <span>设置</span>
+      </div>
       <TabList
         vertical
         appearance="subtle"
         size="medium"
         className={styles.navTabList}
-        selectedValue={current}
-        onTabSelect={(_, d) => onSelect(d.value as SectionId)}
+        selectedValue={section}
+        onTabSelect={(_, d) => onSelectSection(d.value as SectionId)}
       >
         {NAV_ITEMS.map((item) => (
           <Tab
@@ -802,6 +1058,7 @@ function Sidebar({
             value={item.id satisfies TabValue}
             icon={{ children: item.icon }}
             className={styles.navTab}
+            disabled={activeProfile < 0}
           >
             {item.title}
           </Tab>
@@ -820,6 +1077,118 @@ function Sidebar({
         </button>
       </div>
     </aside>
+  );
+}
+
+function ProfileItem({
+  styles,
+  profile,
+  active,
+  onSelect,
+  onRename,
+  onRemove,
+}: SectionProps & {
+  profile: Profile;
+  active: boolean;
+  onSelect: () => void;
+  onRename: (name: string) => void;
+  onRemove: () => void;
+}) {
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState(profile.name);
+
+  useEffect(() => {
+    if (!renaming) setDraft(profile.name);
+  }, [profile.name, renaming]);
+
+  const commit = () => {
+    const name = draft.trim() || profile.name;
+    if (name !== profile.name) onRename(name);
+    setRenaming(false);
+  };
+
+  return (
+    <div
+      className={`${styles.profileItem} ${
+        active ? styles.profileItemActive : ""
+      }`}
+      onClick={() => !renaming && onSelect()}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (renaming) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+    >
+      <div className={styles.profileItemBox}>
+        <AppFolder20Regular />
+        <div className={styles.profileItemMain}>
+          {renaming ? (
+            <Input
+              autoFocus
+              size="small"
+              value={draft}
+              onChange={(_, d) => setDraft(d.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commit();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  setRenaming(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <>
+              <span className={styles.profileItemTitle}>{profile.name}</span>
+              <span className={styles.profileItemMeta}>
+                {profile.hotkeys.length} 热键 · {profile.window_keywords.length}{" "}
+                关键词
+              </span>
+            </>
+          )}
+        </div>
+        {!renaming && (
+          <Menu>
+            <MenuTrigger disableButtonEnhancement>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<MoreHorizontal20Regular />}
+                aria-label="更多操作"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </MenuTrigger>
+            <MenuPopover>
+              <MenuList>
+                <MenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenaming(true);
+                  }}
+                >
+                  重命名
+                </MenuItem>
+                <MenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove();
+                  }}
+                >
+                  删除
+                </MenuItem>
+              </MenuList>
+            </MenuPopover>
+          </Menu>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -868,7 +1237,32 @@ function DirtyBar({
 }
 
 /* ============================================================================
- * Page header / Group / SettingRow
+ * Profile header
+ * ========================================================================== */
+
+function ProfileHeader({
+  styles,
+  profile,
+}: SectionProps & { profile: Profile }) {
+  return (
+    <div className={styles.profileHeader}>
+      <div className={styles.profileHeaderIcon}>
+        <AppFolder20Regular />
+      </div>
+      <div className={styles.profileHeaderText}>
+        <span className={styles.profileHeaderTitle}>{profile.name}</span>
+        <span className={styles.profileHeaderMeta}>
+          {profile.window_keywords.length === 0
+            ? "未设置窗口关键词"
+            : `匹配窗口：${profile.window_keywords.join(" / ")}`}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+ * Group / SettingRow
  * ========================================================================== */
 
 function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -960,7 +1354,7 @@ function HotkeysPage({
     <>
       <PageHeader
         title="热键"
-        subtitle="管理全局组合键以及它们触发时自动输入的内容。"
+        subtitle="管理当前配置下的全局组合键以及它们触发时自动输入的内容。"
       />
 
       <div className={styles.hkSearch}>
@@ -1047,7 +1441,6 @@ function HotkeyRow({
         <span className={styles.keyPlus}>+</span>
         <KeyChip text={hotkey.trigger_key} variant="trigger" />
       </div>
-
       <div className={styles.hkInfo}>
         <span className={styles.hkInfoTitle}>
           {hotkey.description || "未命名热键"}
@@ -1056,7 +1449,6 @@ function HotkeyRow({
           {previewInput(hotkey.input_string)}
         </span>
       </div>
-
       <div className={styles.hkActions}>
         <Tooltip content="删除热键" relationship="label">
           <Button
@@ -1081,31 +1473,32 @@ function HotkeyRow({
 
 function WindowPage({
   styles,
-  keywords,
+  profile,
   draft,
   onChangeDraft,
   onAdd,
   onRemove,
+  onPickWindow,
 }: SectionProps & {
-  keywords: string[];
+  profile: Profile;
   draft: string;
   onChangeDraft: (v: string) => void;
-  onAdd: () => void;
+  onAdd: (value?: string) => void;
   onRemove: (i: number) => void;
+  onPickWindow: () => void;
 }) {
   return (
     <>
       <PageHeader
         title="窗口匹配"
-        subtitle="只有当前活动窗口的标题包含下列任一关键词时，热键才会生效。"
+        subtitle={`只有当前活动窗口的标题包含「${profile.name}」配置下的任一关键词时，热键才会生效。`}
       />
 
       <Group title="新增关键词">
         <SettingRow
           icon={<Add20Regular />}
-          label="添加新关键词"
-          desc="输入要匹配的窗口标题片段，按 Enter 或点击添加按钮。"
-          divider={false}
+          label="手动输入"
+          desc="按 Enter 或点击添加按钮添加新关键词。"
           control={
             <>
               <Input
@@ -1120,18 +1513,35 @@ function WindowPage({
                 }}
                 style={{ width: 200 }}
               />
-              <Button appearance="secondary" onClick={onAdd}>
+              <Button appearance="secondary" onClick={() => onAdd()}>
                 添加
               </Button>
             </>
           }
         />
+        <SettingRow
+          icon={<WindowConsole20Regular />}
+          label="从当前窗口选择"
+          desc="列出所有可见窗口，点选后使用窗口标题作为关键词。"
+          divider={false}
+          control={
+            <Button
+              appearance="secondary"
+              icon={<Search20Regular />}
+              onClick={onPickWindow}
+            >
+              选择窗口…
+            </Button>
+          }
+        />
       </Group>
 
-      <Group title={`已添加（${keywords.length}）`}>
-        {keywords.length === 0 ? (
+      <Group title={`已添加（${profile.window_keywords.length}）`}>
+        {profile.window_keywords.length === 0 ? (
           <div className={styles.emptyTagHint}>
-            <Caption1>还没有关键词。</Caption1>
+            <Caption1>
+              还没有关键词。该配置不会被任何窗口激活。
+            </Caption1>
           </div>
         ) : (
           <div className={styles.tagGroup}>
@@ -1141,8 +1551,12 @@ function WindowPage({
                 if (Number.isFinite(idx)) onRemove(idx);
               }}
             >
-              {keywords.map((kw, i) => (
-                <InteractionTag key={`${kw}-${i}`} value={String(i)} shape="rounded">
+              {profile.window_keywords.map((kw, i) => (
+                <InteractionTag
+                  key={`${kw}-${i}`}
+                  value={String(i)}
+                  shape="rounded"
+                >
                   <InteractionTagPrimary>{kw}</InteractionTagPrimary>
                   <InteractionTagSecondary aria-label={`删除关键词 ${kw}`} />
                 </InteractionTag>
@@ -1161,11 +1575,11 @@ function WindowPage({
 
 function TimingPage({
   styles: _styles,
-  config,
+  profile,
   onChangeInterval,
   onChangeDelay,
 }: SectionProps & {
-  config: AppConfig;
+  profile: Profile;
   onChangeInterval: (v: number) => void;
   onChangeDelay: (v: number) => void;
 }) {
@@ -1180,7 +1594,7 @@ function TimingPage({
     <>
       <PageHeader
         title="输入节奏"
-        subtitle="控制热键触发后的自动重发频率，以及模拟按键之间的间隔。"
+        subtitle={`当前配置「${profile.name}」的自动重发频率与按键间隔。`}
       />
 
       <Group title="计时">
@@ -1192,8 +1606,8 @@ function TimingPage({
             <SpinButton
               min={1}
               step={1}
-              value={config.auto_input_interval_secs}
-              displayValue={`${config.auto_input_interval_secs} 秒`}
+              value={profile.auto_input_interval_secs}
+              displayValue={`${profile.auto_input_interval_secs} 秒`}
               onChange={handleSpin(onChangeInterval, 1)}
             />
           }
@@ -1207,8 +1621,8 @@ function TimingPage({
             <SpinButton
               min={0}
               step={5}
-              value={config.input_delay_millis}
-              displayValue={`${config.input_delay_millis} 毫秒`}
+              value={profile.input_delay_millis}
+              displayValue={`${profile.input_delay_millis} 毫秒`}
               onChange={handleSpin(onChangeDelay, 0)}
             />
           }
@@ -1267,7 +1681,6 @@ function EditorDrawer({
       <DrawerBody>
         {hotkey && (
           <div style={{ display: "flex", flexDirection: "column", rowGap: 20 }}>
-            {/* 组合键预览 + 录制 */}
             <div className={styles.drawerCombo}>
               <div className={styles.drawerComboRow}>
                 <KeyChip text={hotkey.modifier_key} />
@@ -1294,7 +1707,8 @@ function EditorDrawer({
                 selectedOptions={[hotkey.modifier_key]}
                 disabled={recording}
                 onOptionSelect={(_, d) => {
-                  if (d.optionValue) onChange({ modifier_key: d.optionValue });
+                  if (d.optionValue)
+                    onChange({ modifier_key: d.optionValue });
                 }}
               >
                 {ALL_MODIFIERS.map((m) => (
@@ -1350,6 +1764,136 @@ function EditorDrawer({
         )}
       </DrawerBody>
     </Drawer>
+  );
+}
+
+/* ============================================================================
+ * 窗口选择对话框
+ * ========================================================================== */
+
+function WindowPickerDialog({
+  styles,
+  open,
+  onOpenChange,
+  onPick,
+}: SectionProps & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPick: (title: string) => void;
+}) {
+  const [windows, setWindows] = useState<WindowInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState("");
+  const [selected, setSelected] = useState<number | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await listWindows();
+      setWindows(list);
+      setSelected(list.length > 0 ? 0 : null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      setFilter("");
+      void refresh();
+    }
+  }, [open, refresh]);
+
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return windows;
+    return windows.filter((w) => w.title.toLowerCase().includes(q));
+  }, [windows, filter]);
+
+  const submit = () => {
+    if (selected === null) return;
+    const w = filtered[selected];
+    if (w) onPick(w.title);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(_, d) => onOpenChange(d.open)}
+      modalType="modal"
+    >
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>从当前窗口中选择</DialogTitle>
+          <DialogContent
+            style={{ display: "flex", flexDirection: "column", rowGap: 12 }}
+          >
+            <div style={{ display: "flex", gap: 8 }}>
+              <Input
+                style={{ flex: 1 }}
+                contentBefore={<Search20Regular />}
+                placeholder="过滤窗口标题…"
+                value={filter}
+                onChange={(_, d) => setFilter(d.value)}
+              />
+              <Button
+                appearance="secondary"
+                onClick={() => void refresh()}
+                disabled={loading}
+              >
+                刷新
+              </Button>
+            </div>
+
+            <div className={styles.windowList}>
+              {loading ? (
+                <div className={styles.empty}>
+                  <Caption1>正在枚举窗口…</Caption1>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className={styles.empty}>
+                  <Caption1>没有匹配的窗口</Caption1>
+                </div>
+              ) : (
+                filtered.map((w, i) => (
+                  <div
+                    key={`${w.hwnd}-${i}`}
+                    className={`${styles.windowItem} ${
+                      selected === i ? styles.windowItemActive : ""
+                    }`}
+                    onClick={() => setSelected(i)}
+                    onDoubleClick={() => onPick(w.title)}
+                    role="option"
+                    aria-selected={selected === i}
+                  >
+                    <Window20Regular />
+                    <span className={styles.windowItemTitle} title={w.title}>
+                      {w.title}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+            <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+              提示：将使用窗口标题作为关键词；如要支持多个版本，可以在添加后手动改成
+              <code> %关键字% </code>形式以模糊匹配。
+            </Caption1>
+          </DialogContent>
+          <DialogActions>
+            <DialogTrigger disableButtonEnhancement>
+              <Button appearance="subtle">取消</Button>
+            </DialogTrigger>
+            <Button
+              appearance="primary"
+              disabled={selected === null}
+              onClick={submit}
+            >
+              使用此窗口标题
+            </Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }
 
@@ -1410,5 +1954,3 @@ function toastTitle(kind: ToastKind): string {
       return "提示";
   }
 }
-
-void Text;
