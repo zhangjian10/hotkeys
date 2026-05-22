@@ -1,7 +1,6 @@
 use rdev::listen;
 
 mod auto_input;
-mod config;
 mod elevation;
 mod hotkey;
 mod input;
@@ -9,9 +8,9 @@ mod state;
 mod window;
 
 use auto_input::AutoInputManager;
-use config::Config;
 use elevation::ensure_elevated;
 use hotkey::HotkeyManager;
+use hotkeys_core::Config;
 use notify::{EventKind, RecursiveMode, Watcher};
 use state::AppState;
 use std::path::Path;
@@ -84,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     WindowManager::init_window_hook()?;
 
     // Start auto input
-    AutoInputManager::start(); // Refresh Warcraft status
+    AutoInputManager::start();
     WindowManager::refresh_state();
 
     // Start listening for global keyboard events

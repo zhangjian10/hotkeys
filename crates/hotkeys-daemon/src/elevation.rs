@@ -1,20 +1,20 @@
-use std::process::{Command, exit};
 use std::env;
+use std::process::{Command, exit};
 use winapi::{
+    shared::minwindef::{DWORD, FALSE},
     um::{
         handleapi::CloseHandle,
         processthreadsapi::{GetCurrentProcess, OpenProcessToken},
         securitybaseapi::GetTokenInformation,
-        winnt::{TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY},
+        winnt::{TOKEN_ELEVATION, TOKEN_QUERY, TokenElevation},
     },
-    shared::minwindef::{DWORD, FALSE},
 };
 
 /// 检查当前进程是否以管理员权限运行
 pub fn is_elevated() -> bool {
     unsafe {
         let mut token_handle = std::ptr::null_mut();
-        
+
         // 获取当前进程的访问令牌
         if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token_handle) == FALSE {
             return false;
@@ -46,21 +46,20 @@ pub fn is_elevated() -> bool {
 pub fn request_elevation() -> ! {
     let current_exe = env::current_exe().expect("Failed to get current executable path");
     let args: Vec<String> = env::args().skip(1).collect();
-    
+
     println!("Requesting administrator privileges...");
-    
+
     // 使用 runas 动词通过 ShellExecute 重新启动程序
     let mut cmd = Command::new("powershell");
-    cmd.arg("-Command")
-       .arg(format!(
-           "Start-Process '{}' {} -Verb RunAs",
-           current_exe.display(),
-           if args.is_empty() {
-               String::new()
-           } else {
-               format!("-ArgumentList '{}'", args.join("', '"))
-           }
-       ));
+    cmd.arg("-Command").arg(format!(
+        "Start-Process '{}' {} -Verb RunAs",
+        current_exe.display(),
+        if args.is_empty() {
+            String::new()
+        } else {
+            format!("-ArgumentList '{}'", args.join("', '"))
+        }
+    ));
 
     match cmd.spawn() {
         Ok(_) => {

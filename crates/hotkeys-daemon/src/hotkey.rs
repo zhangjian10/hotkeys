@@ -1,4 +1,5 @@
-use crate::{config::string_to_rdev_key, state::AppState};
+use crate::state::AppState;
+use hotkeys_core::string_to_rdev_key;
 use rdev::{Event, EventType, Key as RdevKey};
 
 pub struct HotkeyManager;

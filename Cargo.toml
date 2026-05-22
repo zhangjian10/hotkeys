@@ -1,27 +1,10 @@
-[package]
-edition = "2024"
-name = "hotkeys"
-version = "0.1.0"
-
-[dependencies]
-enigo = {version = "0.6.1", default-features = false}
-lazy_static = {version = "1.5.0", default-features = false}
-notify = "8.2.0"
-rdev = {version = "0.5.2", default-features = false}
-serde = {version = "1.0.228", default-features = false, features = ["std", "derive"]}
-toml = {version = "0.9.8"}
-winapi = {version = "0.3.9", features = [
-  "handleapi",
-  "securitybaseapi",
-  "processthreadsapi",
-  "winnt",
-]}
-
-[build-dependencies]
-winres = "0.1.12"
-
-[package.metadata.winres]
-manifest = "app.manifest"
+[workspace]
+members = [
+    "crates/hotkeys-core",
+    "crates/hotkeys-daemon",
+    "crates/hotkeys-gui",
+]
+resolver = "2"
 
 [profile.release]
 # Build settings optimized for smallest binary size. Notes:

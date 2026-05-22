@@ -1,4 +1,4 @@
-use crate::config::Config;
+use hotkeys_core::Config;
 use lazy_static::lazy_static;
 use rdev::Key as RdevKey;
 use std::{
@@ -93,7 +93,6 @@ impl AppState {
         auto_input.retain(|s| s != input_str);
     }
 
-    #[allow(dead_code)]
     pub fn clear_auto_input() {
         let mut auto_input = AUTO_INPUT.lock().unwrap();
         auto_input.clear();
