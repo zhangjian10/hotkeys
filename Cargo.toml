@@ -2,7 +2,7 @@
 members = [
     "crates/hotkeys-core",
     "crates/hotkeys-daemon",
-    "crates/hotkeys-gui",
+    "crates/hotkeys-gui/src-tauri",
 ]
 resolver = "2"
 

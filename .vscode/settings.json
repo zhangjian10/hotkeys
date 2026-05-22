@@ -1,3 +1,17 @@
 {
-  "cSpell.enabled": false
+  "cSpell.enabled": false,
+
+  // rust-analyzer 使用项目 rust-toolchain.toml 指定的 nightly 工具链，
+  // 避免编辑器侧的 stable rust-analyzer 加载 cargo 用 nightly 编译出来的
+  // proc-macro DLL（如 native_windows_derive）时报 ABI mismatch 错。
+  //
+  // 通过 rustup 的代理脚本调用，rustup 会读取 rust-toolchain.toml 自动选版本。
+  "rust-analyzer.server.extraEnv": {
+    "RUSTUP_TOOLCHAIN": "nightly"
+  },
+
+  // proc-macro 必须启用，否则带 #[derive(NwgUi)] 的字段全部解析失败
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.cargo.buildScripts.enable": true
 }
+

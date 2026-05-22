@@ -1,1 +1,14 @@
 /target
+
+# Rust
+**/target/
+
+# 前端
+crates/hotkeys-gui/node_modules/
+crates/hotkeys-gui/dist/
+crates/hotkeys-gui/src-tauri/gen/
+crates/hotkeys-gui/src-tauri/target/
+
+# 构建产物
+*.crash.log
+hotkeys-gui.crash.log

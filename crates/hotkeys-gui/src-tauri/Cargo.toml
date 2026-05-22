@@ -1,0 +1,25 @@
+[package]
+name = "hotkeys-gui"
+version = "0.1.0"
+edition = "2024"
+description = "Hotkeys 配置 GUI（Tauri v2 + React + Fluent UI v9）"
+
+[[bin]]
+name = "hotkeys-gui"
+path = "src/main.rs"
+
+[lib]
+# Tauri v2 推荐：把 setup 逻辑放 lib，方便桌面 / 移动共享
+name = "hotkeys_gui_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+hotkeys-core = { path = "../../hotkeys-core" }
+
+# Tauri v2 核心；当前应用只用 invoke 命令 + 标准窗口行为，无需任何插件
+tauri = { version = "2", features = [] }
+
+serde = { version = "1", features = ["derive"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

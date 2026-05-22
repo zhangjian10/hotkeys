@@ -145,7 +145,7 @@ hotkeys/
 │   │       ├── input.rs
 │   │       ├── state.rs
 │   │       └── window.rs
-│   └── hotkeys-gui/            # 图形配置工具（egui）
+│   └── hotkeys-gui/            # 图形配置工具（native-windows-gui）
 │       └── src/
 │           ├── main.rs
 │           ├── app.rs
@@ -168,7 +168,8 @@ A: 全局热键监听需要底层系统访问权限，这是 Windows 的安全�
 A: 不需要。GUI 只读写 `hotkeys.toml` 配置文件，daemon 通过文件监听自动应用变更。
 
 ### Q: GUI 里录制热键时，按了组合键不响应？
-A: 录制时必须保持 GUI 窗口聚焦（egui 不开全局键盘 hook，避免与 daemon 抢事件）。点击「🎙 录制」按钮后，直接按下组合键即可；按 `Esc` 取消，30 秒未操作自动取消。
+A: 点击右侧编辑面板的「● 录制」按钮，**让 GUI 窗口保持聚焦**，然后按下组合键即可自动捕获修饰键 + 触发键。按 `Esc` 取消。
+GUI 仅监听本窗口的键盘事件，不开全局键盘 hook，因此不会与 daemon 抢事件，也不需要管理员权限。
 
 ### Q: 修改配置后 daemon 没有自动加载？
 A: 检查：

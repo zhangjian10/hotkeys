@@ -1,0 +1,57 @@
+/* 桌面应用全局样式：仅做必要重置，配色与字体交给 Fluent UI 主题 */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  font-family:
+    "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", system-ui,
+    -apple-system, sans-serif;
+}
+
+/* 桌面应用：禁用浏览器默认拖拽 */
+img,
+a {
+  -webkit-user-drag: none;
+}
+
+/* 文本可选区域（textarea / input） */
+input,
+textarea,
+[data-selectable="true"] {
+  user-select: text;
+}
+
+/* Win11 风细滚动条：默认隐藏，hover 时浮现 */
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 4px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  transition: background-color 0.15s;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background-color: rgb(0 0 0 / 0.18);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(0 0 0 / 0.36);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}

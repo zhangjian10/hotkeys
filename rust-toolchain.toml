@@ -1,3 +1,5 @@
 [toolchain]
 channel = "nightly"
-components = ["rust-src"]
+# rust-analyzer：随工具链一起安装，避免 IDE 用系统/stable 版的 rust-analyzer 与 proc-macro DLL 出现 ABI 不匹配
+# rust-src：build-std / panic-immediate-abort 等 nightly 优化所需
+components = ["rust-src", "rust-analyzer"]

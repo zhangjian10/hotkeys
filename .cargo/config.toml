@@ -1,7 +1,7 @@
 [build]
 rustflags = [
   "-Zlocation-detail=none",
-  "-Zfmt-debug=none",
+  # "-Zfmt-debug=none",
 ]
 
 [profile.release]

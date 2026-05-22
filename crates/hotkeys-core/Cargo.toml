@@ -8,5 +8,5 @@ path = "src/lib.rs"
 
 [dependencies]
 serde = { version = "1.0.228", default-features = false, features = ["std", "derive"] }
-toml = { version = "0.9.8" }
-rdev = { version = "0.5.2", default-features = false }
+toml = { version = "1" }
+rdev = { version = "0.5", default-features = false }
