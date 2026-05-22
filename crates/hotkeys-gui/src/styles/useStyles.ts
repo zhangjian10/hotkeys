@@ -12,6 +12,84 @@ export const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground3,
     color: tokens.colorNeutralForeground1,
   },
+
+  /* ================= 自绘标题栏（decorations:false 配合） ================= */
+  titleBar: {
+    flexShrink: 0,
+    height: "32px",
+    display: "flex",
+    alignItems: "stretch",
+    backgroundColor: tokens.colorNeutralBackground3,
+    color: tokens.colorNeutralForeground2,
+    userSelect: "none",
+  },
+  titleBarLeft: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: "8px",
+    paddingInline: "12px",
+    flexShrink: 0,
+  },
+  titleBarIcon: {
+    width: "16px",
+    height: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: tokens.colorBrandForeground1,
+  },
+  titleBarTitle: {
+    fontSize: "12px",
+    fontWeight: tokens.fontWeightRegular,
+    color: tokens.colorNeutralForeground2,
+    whiteSpace: "nowrap",
+  },
+  titleBarSpacer: { flex: 1, minWidth: 0 },
+  titleBarActions: {
+    display: "flex",
+    alignItems: "stretch",
+    flexShrink: 0,
+  },
+  /**
+   * 覆盖 Fluent Button：
+   * - 撑满标题栏高度 (32px)
+   * - 加宽到 Win11 标准 46px
+   * - 去圆角、去边框、去 min-width
+   * - 内部图标颜色随 button 当前颜色变化
+   */
+  titleBarBtn: {
+    height: "32px",
+    minWidth: "46px",
+    minHeight: "32px",
+    paddingInline: 0,
+    paddingBlock: 0,
+    borderRadius: 0,
+    border: "none",
+    backgroundColor: "transparent",
+    color: tokens.colorNeutralForeground2,
+    "&:hover": {
+      backgroundColor: tokens.colorSubtleBackgroundHover,
+      color: tokens.colorNeutralForeground1,
+      border: "none",
+    },
+    "&:hover:active": {
+      backgroundColor: tokens.colorSubtleBackgroundPressed,
+      color: tokens.colorNeutralForeground1,
+      border: "none",
+    },
+  },
+  titleBarClose: {
+    "&:hover": {
+      backgroundColor: tokens.colorPaletteRedBackground3,
+      color: tokens.colorNeutralForegroundOnBrand,
+      border: "none",
+    },
+    "&:hover:active": {
+      backgroundColor: tokens.colorPaletteRedForeground3,
+      color: tokens.colorNeutralForegroundOnBrand,
+      border: "none",
+    },
+  },
   body: {
     display: "grid",
     gridTemplateColumns: "260px minmax(0, 1fr)",
@@ -25,7 +103,7 @@ export const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
-    paddingTop: "16px",
+    paddingTop: "8px",
     paddingInline: "8px",
     backgroundColor: tokens.colorNeutralBackground3,
   },

@@ -30,6 +30,7 @@ import {
 
 /* components */
 import { Sidebar } from "./components/Sidebar/Sidebar";
+import { TitleBar } from "./components/TitleBar";
 import { DirtyBar } from "./components/DirtyBar";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { NoProfilesEmpty } from "./components/NoProfilesEmpty";
@@ -310,6 +311,7 @@ export default function App() {
   /* ------------------------- 渲染 ------------------------- */
   return (
     <div className={styles.root}>
+      <TitleBar title="Hotkeys 配置" />
       <div className={styles.body}>
         <Sidebar
           profiles={config.profiles}

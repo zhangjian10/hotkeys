@@ -1,12 +1,9 @@
 import {
   Button,
-  Caption1,
-  Subtitle1,
   Tab,
   TabList,
   type TabValue,
   Tooltip,
-  tokens,
 } from "@fluentui/react-components";
 import {
   Add20Regular,
@@ -46,13 +43,6 @@ export function Sidebar({
   const styles = useStyles();
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.brand}>
-        <Subtitle1 block>Hotkeys</Subtitle1>
-        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-          配置中心
-        </Caption1>
-      </div>
-
       <div className={styles.navGroupLabel}>
         <span>配置</span>
         <Tooltip content="新建配置" relationship="label">
