@@ -20,6 +20,7 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import {
+  Dismiss20Regular,
   FolderOpen20Regular,
   Search20Regular,
   Timer20Regular,
@@ -85,7 +86,18 @@ export function SettingsDialog({
     <Dialog open={open} onOpenChange={(_, d) => onOpenChange(d.open)}>
       <DialogSurface className={styles.settingsDialog}>
         <DialogBody>
-          <DialogTitle>设置</DialogTitle>
+          <DialogTitle
+            action={
+              <Button
+                appearance="subtle"
+                aria-label="关闭设置"
+                icon={<Dismiss20Regular />}
+                onClick={() => onOpenChange(false)}
+              />
+            }
+          >
+            设置
+          </DialogTitle>
           <DialogContent>
             <TabList
               selectedValue={tab}

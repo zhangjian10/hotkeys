@@ -24,6 +24,7 @@ import {
   Checkmark20Regular,
   Copy20Regular,
   Delete20Regular,
+  Dismiss20Regular,
   DocumentBulletList20Regular,
   Edit20Regular,
   Play20Regular,
@@ -206,7 +207,18 @@ export function TopBar({
         </DialogTrigger>
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>新建 Profile</DialogTitle>
+            <DialogTitle
+              action={
+                <Button
+                  appearance="subtle"
+                  aria-label="关闭"
+                  icon={<Dismiss20Regular />}
+                  onClick={() => setCreateOpen(false)}
+                />
+              }
+            >
+              新建 Profile
+            </DialogTitle>
             <DialogContent>
               <div className={styles.dialogForm}>
                 <Field label="名称" required>

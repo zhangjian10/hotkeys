@@ -15,6 +15,7 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowClockwise20Regular,
+  Dismiss20Regular,
   Search20Regular,
   Window20Regular,
 } from "@fluentui/react-icons";
@@ -88,7 +89,18 @@ export function WindowPickerDialog({
     >
       <DialogSurface>
         <DialogBody>
-          <DialogTitle>从当前窗口中选择</DialogTitle>
+          <DialogTitle
+            action={
+              <Button
+                appearance="subtle"
+                aria-label="关闭"
+                icon={<Dismiss20Regular />}
+                onClick={() => onOpenChange(false)}
+              />
+            }
+          >
+            从当前窗口中选择
+          </DialogTitle>
           <DialogContent className={styles.windowPickerBody}>
             <div className={styles.windowPickerRow}>
               <Input
