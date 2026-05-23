@@ -2,17 +2,15 @@
 //
 // 设计：
 // - 用户点录制按钮进入录制态，对 `window` 临时挂载 keydown 监听
-// - 按下纯修饰键时累积到 modifier set，并通过 onProgress 把当前集合回报给 UI
-//   （不结束录制——继续等用户按非修饰键作为 trigger）
-// - 按下非纯修饰键时根据当时的 modifier set + 该键作为 trigger 完成捕获
-// - 也接受 e.ctrlKey/altKey/shiftKey/metaKey 作为补充：用户若一次性按下
-//   Ctrl+Shift+S，单次事件就能拿到完整组合键
+// - 按下纯修饰键时**按按下顺序**追加到数组（已在数组中则跳过），
+//   并通过 onProgress 实时回报当前序列
+// - 按下非纯修饰键时根据当时的 modifier 序列 + 该键作为 trigger 完成捕获
 // - Esc 取消、Tab/Enter 等会被 preventDefault 吞掉避免焦点切换
 
 import { ALL_MODIFIERS, ALL_TRIGGERS } from "./api";
 
 export interface RecordedCombo {
-  /** 修饰键集合（来自 ALL_MODIFIERS），已按字典序排序去重；可能为空。 */
+  /** 修饰键序列（按按下顺序，可能为空） */
   modifiers: string[];
   /** 触发键（必定来自 ALL_TRIGGERS） */
   trigger: (typeof ALL_TRIGGERS)[number];
@@ -24,7 +22,7 @@ export type RecordResult =
   | { kind: "unsupported"; raw: string };
 
 export interface StartOptions {
-  /** 用户按下纯修饰键时实时回调当前 modifier set；UI 用于显示已按下的徽章。 */
+  /** 用户按下纯修饰键时实时回调当前序列；UI 用于显示已按下的徽章。 */
   onProgress?: (modifiers: string[]) => void;
 }
 
@@ -47,26 +45,13 @@ function codeToModifier(code: string): (typeof ALL_MODIFIERS)[number] | null {
   return null;
 }
 
-/** 从一个 KeyboardEvent 的 ctrlKey/altKey/... 标志位收集修饰键。 */
-function flagsToModifiers(e: KeyboardEvent): string[] {
-  const out: string[] = [];
-  if (e.ctrlKey) out.push("Ctrl");
-  if (e.altKey) out.push("Alt");
-  if (e.shiftKey) out.push("Shift");
-  if (e.metaKey) out.push("Meta");
-  return out;
-}
-
-function sortedUnique(xs: string[]): string[] {
-  return [...new Set(xs)].sort();
-}
-
 export function startRecording(
   onResult: (result: RecordResult) => void,
   opts: StartOptions = {},
 ): () => void {
   let done = false;
-  const held = new Set<string>();
+  /** 按按下顺序追加；不重复 */
+  const sequence: string[] = [];
 
   const listener = (e: KeyboardEvent) => {
     e.preventDefault();
@@ -81,8 +66,10 @@ export function startRecording(
 
     const mod = codeToModifier(e.code);
     if (mod) {
-      held.add(mod);
-      opts.onProgress?.(sortedUnique([...held]));
+      if (!sequence.includes(mod)) {
+        sequence.push(mod);
+        opts.onProgress?.([...sequence]);
+      }
       return;
     }
 
@@ -92,25 +79,24 @@ export function startRecording(
       return;
     }
 
-    // 合并"已累积按下的修饰键"与"事件 flag 上现存的修饰键"——后者能兜住
-    // 用户先把 Ctrl 按下 + 在同一 keydown 里立刻按 S 这类极快情况
-    const merged = sortedUnique([...held, ...flagsToModifiers(e)]);
-
     finish({
       kind: "captured",
       combo: {
-        modifiers: merged,
+        modifiers: [...sequence],
         trigger: trigger as RecordedCombo["trigger"],
       },
     });
   };
 
-  // keyup 时把松开的修饰键从 held 里抠掉，并实时回报 UI
+  // keyup 时把松开的修饰键从序列里移除，并实时回报 UI
   const upListener = (e: KeyboardEvent) => {
     if (done) return;
     const mod = codeToModifier(e.code);
-    if (mod && held.delete(mod)) {
-      opts.onProgress?.(sortedUnique([...held]));
+    if (!mod) return;
+    const idx = sequence.indexOf(mod);
+    if (idx >= 0) {
+      sequence.splice(idx, 1);
+      opts.onProgress?.([...sequence]);
     }
   };
 
@@ -126,3 +112,4 @@ export function startRecording(
   window.addEventListener("keyup", upListener, true);
   return () => finish({ kind: "cancelled" });
 }
+

@@ -54,9 +54,10 @@ function ComboBadgeBase({
   const content = state === "recording" ? recordingContent : staticContent;
 
   // 三态都用 tint 外观（淡底+柔色字），仅靠 color 区分：
-  //   static / conflict / recording -> 仅色相不同，避免刺眼
+  //   static / recording -> brand（淡蓝）
+  //   conflict           -> severe（淡橙，比 warning 黄更醒目，又不刺眼）
   const appearance = state === "recording" ? "outline" : "tint";
-  const color = state === "conflict" ? "warning" : "brand";
+  const color = state === "conflict" ? "severe" : "brand";
 
   const icon =
     state === "recording" ? <Record16Regular /> : <Edit16Regular />;

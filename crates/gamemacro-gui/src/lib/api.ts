@@ -4,9 +4,9 @@ import { invoke } from "@tauri-apps/api/core";
 
 export interface HotkeyConfig {
   /**
-   * 修饰键集合（每项必须出自 ALL_MODIFIERS）。空数组 = 无修饰键（不推荐，
-   * 单字母会与游戏内输入冲突）。daemon 永远按字典序去重存储；GUI 写入前
-   * 也应保持有序。
+   * 修饰键序列（每项必须出自 ALL_MODIFIERS）。**保留用户按下的顺序**——
+   * 录制时按下的次序决定保存顺序；查重 / 触发匹配都按数组本身做。
+   * 空数组 = 无修饰键（不推荐，单字母会与游戏内输入冲突）。
    */
   modifiers: string[];
   trigger_key: string;
@@ -187,20 +187,9 @@ export function emptyHotkey(): HotkeyConfig {
   };
 }
 
-/** 把任意 modifiers 序列化为字典序去重的"组合键身份"，与 core::combo_signature 对齐。 */
+/** 把 modifiers + trigger 拼成"组合键身份"，与 core::combo_signature 对齐。
+ *  modifiers 顺序敏感：Ctrl+Shift 与 Shift+Ctrl 视为不同条目。 */
 export function comboSignature(hk: HotkeyConfig): string {
-  const sorted = [...new Set(hk.modifiers)].sort();
-  return sorted.length === 0
-    ? hk.trigger_key
-    : `${sorted.join("+")}::${hk.trigger_key}`;
-}
-
-/** 规范化 modifiers：排序+去重，过滤空串。供 GUI 写入路径调用。 */
-export function normalizeModifiers(mods: readonly string[]): string[] {
-  const set = new Set<string>();
-  for (const m of mods) {
-    const t = m.trim();
-    if (t) set.add(t);
-  }
-  return [...set].sort();
+  const mods = hk.modifiers ?? [];
+  return mods.length === 0 ? hk.trigger_key : `${mods.join("+")}::${hk.trigger_key}`;
 }

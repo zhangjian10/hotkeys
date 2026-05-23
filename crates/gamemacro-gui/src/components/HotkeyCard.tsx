@@ -148,19 +148,21 @@ function HotkeyCardBase({
       onKeyDown={handleKeyDown}
       aria-expanded={expanded}
     >
-      {/* ============ 折叠态主行（展开时仍保留作头部） ============ */}
+      {/* ============ 折叠态主行（展开时仍保留作头部，但 ComboBadge 移到展开体内避免重复） ============ */}
       <div className={styles.hkCardHead}>
-        <span data-stop-card>
-          <ComboBadge
-            modifiers={modifiers}
-            triggerKey={hotkey.trigger_key}
-            state={badgeState}
-            pendingModifiers={pendingModifiers}
-            conflictHint={conflictHint}
-            onClick={onToggleRecord}
-            size="large"
-          />
-        </span>
+        {!expanded && (
+          <span data-stop-card>
+            <ComboBadge
+              modifiers={modifiers}
+              triggerKey={hotkey.trigger_key}
+              state={badgeState}
+              pendingModifiers={pendingModifiers}
+              conflictHint={conflictHint}
+              onClick={onToggleRecord}
+              size="large"
+            />
+          </span>
+        )}
 
         <div className={styles.hkCardText}>
           <span className={styles.hkCardTitle}>
