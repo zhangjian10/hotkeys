@@ -7,12 +7,11 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 /// 已激活循环的热键 -> 它在 LoopRuntime 中的 handle。
-/// key 用 (modifier, trigger) 字符串对来标识热键身份；这是因为 daemon 每次按键
-/// 都从 toml 读到的 HotkeyConfig 是 clone 出来的，没有稳定 id 可用。
-static ACTIVE_LOOPS: Mutex<Option<HashMap<(String, String), LoopHandle>>> = Mutex::new(None);
+/// key 用 "组合键 signature"（HotkeyConfig::combo_signature）来标识热键身份；
+/// 这样 (Ctrl+Shift+S) 与 (Shift+Ctrl+S) 写法不同也能视为同一条。
+static ACTIVE_LOOPS: Mutex<Option<HashMap<String, LoopHandle>>> = Mutex::new(None);
 
-fn active_loops_lock() -> std::sync::MutexGuard<'static, Option<HashMap<(String, String), LoopHandle>>>
-{
+fn active_loops_lock() -> std::sync::MutexGuard<'static, Option<HashMap<String, LoopHandle>>> {
     let mut g = ACTIVE_LOOPS.lock().unwrap();
     if g.is_none() {
         *g = Some(HashMap::new());
@@ -44,30 +43,42 @@ impl HotkeyManager {
     }
 
     /// 在当前激活 profile 下查找匹配的热键。返回 (hotkey, effective_interval_secs, delay_ms)。
+    ///
+    /// 多修饰键匹配规则：热键的全部 modifiers 必须都按下；其它修饰键无所谓。
+    /// （这与 IDE / 系统级 hotkey 的"无关修饰键"语义略不同，但对游戏宏更友好——
+    ///  按 Ctrl 同时再按 Ctrl+Shift+S 也应触发，避免抢键节奏。）
     fn find_match_with_context(trigger_key: RdevKey) -> Option<(HotkeyConfig, u64, u64)> {
         let profile: Profile = AppState::get_active_profile()?;
         let modifier_keys = AppState::get_modifier_keys_state();
 
         for hk in &profile.hotkeys {
-            if let (Some(cm), Some(ct)) = (
-                string_to_rdev_key(&hk.modifier_key),
-                string_to_rdev_key(&hk.trigger_key),
-            ) {
-                if ct == trigger_key && matches!(modifier_keys.get(&cm), Some(true)) {
-                    return Some((
-                        hk.clone(),
-                        hk.effective_interval_secs(&profile),
-                        profile.input_delay_millis,
-                    ));
-                }
+            let Some(ct) = string_to_rdev_key(&hk.trigger_key) else {
+                continue;
+            };
+            if ct != trigger_key {
+                continue;
             }
+            // 所有声明的 modifier 都需要处于按下态
+            let all_held = hk.modifiers.iter().all(|m| {
+                string_to_rdev_key(m)
+                    .map(|rk| matches!(modifier_keys.get(&rk), Some(true)))
+                    .unwrap_or(false)
+            });
+            if !all_held {
+                continue;
+            }
+            return Some((
+                hk.clone(),
+                hk.effective_interval_secs(&profile),
+                profile.input_delay_millis,
+            ));
         }
         None
     }
 
     /// 处理一次匹配命中：根据 `repeat` 字段走单次或循环路径。
     fn trigger_hotkey(hotkey: HotkeyConfig, interval_secs: u64, delay_ms: u64) {
-        let key = (hotkey.modifier_key.clone(), hotkey.trigger_key.clone());
+        let key = hotkey.combo_signature();
         let label = hotkey.input_string.replace('\n', " ");
 
         if !hotkey.repeat {
@@ -122,11 +133,15 @@ impl HotkeyManager {
                 } else {
                     "once".to_string()
                 };
+                let combo = if hk.modifiers.is_empty() {
+                    hk.trigger_key.clone()
+                } else {
+                    format!("{}+{}", hk.modifiers.join("+"), hk.trigger_key)
+                };
                 log_info!(
-                    "      {}. {} + {} -> {} ({}, {})",
+                    "      {}. {} -> {} ({}, {})",
                     i + 1,
-                    hk.modifier_key,
-                    hk.trigger_key,
+                    combo,
                     hk.input_string.replace('\n', " "),
                     mode,
                     desc

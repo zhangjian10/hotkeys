@@ -5,31 +5,31 @@ auto_input_interval_secs = 3
 input_delay_millis = 50
 
 [[profiles.hotkeys]]
-modifier_key = "Ctrl"
+modifiers = ["Ctrl"]
 trigger_key = "X"
 input_string = """-ss"""
 description = "召唤刑天"
 
 [[profiles.hotkeys]]
-modifier_key = "Ctrl"
+modifiers = ["Ctrl"]
 trigger_key = "Z"
 input_string = """-aa"""
 description = "召唤项羽"
 
 [[profiles.hotkeys]]
-modifier_key = "Ctrl"
+modifiers = ["Ctrl"]
 trigger_key = "W"
 input_string = """-ww"""
 description = "召唤狼"
 
 [[profiles.hotkeys]]
-modifier_key = "Ctrl"
+modifiers = ["Ctrl"]
 trigger_key = "D"
 input_string = """-dd"""
 description = "召唤兵"
 
 [[profiles.hotkeys]]
-modifier_key = "Ctrl"
+modifiers = ["Ctrl"]
 trigger_key = "N"
 input_string = """-rmoon"""
 description = "召唤老鹰"

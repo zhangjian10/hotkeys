@@ -1,6 +1,6 @@
 use std::{fmt, fs, io, path::Path};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 const DEFAULT_CONFIG_TOML: &str = include_str!("../default_config.toml");
 
@@ -8,9 +8,47 @@ fn default_true() -> bool {
     true
 }
 
+/// 标准修饰键集合（与 GUI ALL_MODIFIERS 保持一致）。
+const KNOWN_MODIFIERS: &[&str] = &["Alt", "Ctrl", "Meta", "Shift"];
+
+/// 自定义反序列化：兼容三种历史/新格式
+/// - `modifiers = ["Ctrl", "Shift"]`（新）
+/// - `modifier_key = "Ctrl"`         （旧字段名，单值）
+/// - 缺省：返回空 Vec
+///
+/// 同时把结果按字典序排序去重，保证 (modifiers, trigger) 是稳定的"组合键身份"。
+fn modifiers_de<'de, D>(d: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(String),
+        Many(Vec<String>),
+    }
+    let raw: OneOrMany = OneOrMany::deserialize(d)?;
+    let mut v = match raw {
+        OneOrMany::One(s) => vec![s],
+        OneOrMany::Many(xs) => xs,
+    };
+    v.retain(|m| !m.is_empty());
+    v.sort();
+    v.dedup();
+    Ok(v)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HotkeyConfig {
-    pub modifier_key: String,        // "Alt", "Ctrl", "Shift", "Meta"
+    /// 修饰键集合（"Alt" / "Ctrl" / "Shift" / "Meta"）。
+    /// 反序列化时同时接受旧字段名 `modifier_key`（单值字符串）。
+    /// 永远按字典序排序去重，便于做"组合键身份"比较。
+    #[serde(
+        default,
+        alias = "modifier_key",
+        deserialize_with = "modifiers_de"
+    )]
+    pub modifiers: Vec<String>,
     pub trigger_key: String,         // "BackQuote", "Num1", "F1", etc.
     pub input_string: String,        // String to be input
     pub description: Option<String>, // Optional description
@@ -33,6 +71,27 @@ impl HotkeyConfig {
             .unwrap_or(profile.auto_input_interval_secs)
             .max(1)
     }
+
+    /// 把修饰键集合规范化（排序+去重）。在反序列化路径以外的写入路径调用以保证不变量。
+    pub fn normalize(&mut self) {
+        self.modifiers.sort();
+        self.modifiers.dedup();
+    }
+
+    /// "组合键身份"字符串：用于查重 / 作为 active loop map 的 key。
+    /// 形如 `"Alt+Ctrl+Shift::F1"`；modifiers 已是字典序，输出稳定。
+    pub fn combo_signature(&self) -> String {
+        if self.modifiers.is_empty() {
+            self.trigger_key.clone()
+        } else {
+            format!("{}::{}", self.modifiers.join("+"), self.trigger_key)
+        }
+    }
+}
+
+/// 旁路：判断字符串是否是已知修饰键名（GUI / daemon 两侧都需要的小工具）。
+pub fn is_known_modifier(s: &str) -> bool {
+    KNOWN_MODIFIERS.contains(&s)
 }
 
 /// 一个 Profile：通常对应某一款游戏 / 某一类窗口
@@ -236,7 +295,7 @@ mod tests {
 
     #[test]
     fn hotkey_repeat_defaults_to_true_for_legacy_toml() {
-        // 模拟阶段 1 之前的 toml（无 repeat 字段）
+        // 模拟阶段 1 之前的 toml（无 repeat 字段，且使用旧字段 modifier_key）
         let toml_str = r#"
 [[profiles]]
 name = "T"
@@ -252,6 +311,7 @@ input_string = "-ss"
         let cfg: Config = toml::from_str(toml_str).expect("parse");
         let hk = &cfg.profiles[0].hotkeys[0];
         assert!(hk.repeat, "repeat should default to true for legacy configs");
+        assert_eq!(hk.modifiers, vec!["Ctrl".to_string()]);
     }
 
     #[test]
@@ -264,7 +324,7 @@ auto_input_interval_secs = 3
 input_delay_millis = 50
 
 [[profiles.hotkeys]]
-modifier_key = "Ctrl"
+modifiers = ["Ctrl"]
 trigger_key = "X"
 input_string = "-ss"
 repeat = false
@@ -283,7 +343,7 @@ auto_input_interval_secs = 3
 input_delay_millis = 50
 
 [[profiles.hotkeys]]
-modifier_key = "Ctrl"
+modifiers = ["Ctrl"]
 trigger_key = "X"
 input_string = "-ss"
 "#;
@@ -301,7 +361,7 @@ auto_input_interval_secs = 3
 input_delay_millis = 50
 
 [[profiles.hotkeys]]
-modifier_key = "Ctrl"
+modifiers = ["Ctrl"]
 trigger_key = "X"
 input_string = "-ss"
 interval_secs_override = 10
@@ -316,7 +376,7 @@ interval_secs_override = 10
             name: "T".into(),
             window_keywords: vec!["x".into()],
             hotkeys: vec![HotkeyConfig {
-                modifier_key: "Ctrl".into(),
+                modifiers: vec!["Ctrl".into()],
                 trigger_key: "X".into(),
                 input_string: "-ss".into(),
                 description: None,
@@ -335,7 +395,7 @@ interval_secs_override = 10
             name: "T".into(),
             window_keywords: vec!["x".into()],
             hotkeys: vec![HotkeyConfig {
-                modifier_key: "Ctrl".into(),
+                modifiers: vec!["Ctrl".into()],
                 trigger_key: "X".into(),
                 input_string: "-ss".into(),
                 description: None,
@@ -354,7 +414,7 @@ interval_secs_override = 10
             name: "T".into(),
             window_keywords: vec!["x".into()],
             hotkeys: vec![HotkeyConfig {
-                modifier_key: "Ctrl".into(),
+                modifiers: vec!["Ctrl".into()],
                 trigger_key: "X".into(),
                 input_string: "-ss".into(),
                 description: None,
@@ -366,5 +426,71 @@ interval_secs_override = 10
         };
         // 0 秒会让 tokio interval panic / 100% CPU；必须夹到至少 1 秒
         assert_eq!(p.hotkeys[0].effective_interval_secs(&p), 1);
+    }
+
+    #[test]
+    fn hotkey_modifiers_accepts_multi_key_array() {
+        let toml_str = r#"
+[[profiles]]
+name = "T"
+window_keywords = ["x"]
+auto_input_interval_secs = 3
+input_delay_millis = 50
+
+[[profiles.hotkeys]]
+modifiers = ["Shift", "Ctrl"]
+trigger_key = "S"
+input_string = "save"
+"#;
+        let cfg: Config = toml::from_str(toml_str).expect("parse");
+        // 必须排序去重后是 [Ctrl, Shift]
+        assert_eq!(
+            cfg.profiles[0].hotkeys[0].modifiers,
+            vec!["Ctrl".to_string(), "Shift".to_string()]
+        );
+    }
+
+    #[test]
+    fn hotkey_combo_signature_is_stable_across_modifier_input_order() {
+        let a = HotkeyConfig {
+            modifiers: vec!["Shift".into(), "Ctrl".into(), "Alt".into()],
+            trigger_key: "F1".into(),
+            input_string: String::new(),
+            description: None,
+            repeat: true,
+            interval_secs_override: None,
+        };
+        let mut a = a;
+        a.normalize();
+        assert_eq!(a.combo_signature(), "Alt+Ctrl+Shift::F1");
+
+        // 不同输入顺序但同一组合键应得到相同 signature
+        let b = HotkeyConfig {
+            modifiers: vec!["Alt".into(), "Shift".into(), "Ctrl".into()],
+            trigger_key: "F1".into(),
+            input_string: String::new(),
+            description: None,
+            repeat: true,
+            interval_secs_override: None,
+        };
+        let mut b = b;
+        b.normalize();
+        assert_eq!(a.combo_signature(), b.combo_signature());
+    }
+
+    #[test]
+    fn hotkey_no_modifiers_serializes_as_empty_array() {
+        let hk = HotkeyConfig {
+            modifiers: vec![],
+            trigger_key: "F12".into(),
+            input_string: "x".into(),
+            description: None,
+            repeat: true,
+            interval_secs_override: None,
+        };
+        let s = toml::to_string(&hk).expect("serialize");
+        assert!(s.contains("modifiers = []"), "got: {s}");
+        let parsed: HotkeyConfig = toml::from_str(&s).expect("parse");
+        assert_eq!(parsed.modifiers, Vec::<String>::new());
     }
 }
