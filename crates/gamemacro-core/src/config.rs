@@ -4,12 +4,20 @@ use serde::{Deserialize, Serialize};
 
 const DEFAULT_CONFIG_TOML: &str = include_str!("../default_config.toml");
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HotkeyConfig {
     pub modifier_key: String,        // "Alt", "Ctrl", "Shift", "Meta"
     pub trigger_key: String,         // "BackQuote", "Num1", "F1", etc.
     pub input_string: String,        // String to be input
     pub description: Option<String>, // Optional description
+    /// 按一次开始循环输入、再按一次停止；缺省 true（与历史行为一致）。
+    /// 若为 false，按一次只输入一次，不入循环。
+    #[serde(default = "default_true")]
+    pub repeat: bool,
 }
 
 /// 一个 Profile：通常对应某一款游戏 / 某一类窗口
@@ -209,5 +217,44 @@ mod tests {
         assert_eq!(cfg.active_profile_index("hello bar"), Some(1));
         assert_eq!(cfg.active_profile_index("foo bar"), Some(0));
         assert_eq!(cfg.active_profile_index("nothing"), None);
+    }
+
+    #[test]
+    fn hotkey_repeat_defaults_to_true_for_legacy_toml() {
+        // 模拟阶段 1 之前的 toml（无 repeat 字段）
+        let toml_str = r#"
+[[profiles]]
+name = "T"
+window_keywords = ["x"]
+auto_input_interval_secs = 3
+input_delay_millis = 50
+
+[[profiles.hotkeys]]
+modifier_key = "Ctrl"
+trigger_key = "X"
+input_string = "-ss"
+"#;
+        let cfg: Config = toml::from_str(toml_str).expect("parse");
+        let hk = &cfg.profiles[0].hotkeys[0];
+        assert!(hk.repeat, "repeat should default to true for legacy configs");
+    }
+
+    #[test]
+    fn hotkey_repeat_can_be_false_explicitly() {
+        let toml_str = r#"
+[[profiles]]
+name = "T"
+window_keywords = ["x"]
+auto_input_interval_secs = 3
+input_delay_millis = 50
+
+[[profiles.hotkeys]]
+modifier_key = "Ctrl"
+trigger_key = "X"
+input_string = "-ss"
+repeat = false
+"#;
+        let cfg: Config = toml::from_str(toml_str).expect("parse");
+        assert!(!cfg.profiles[0].hotkeys[0].repeat);
     }
 }
