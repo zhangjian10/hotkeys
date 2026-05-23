@@ -37,19 +37,12 @@ function ComboBadgeBase({
       ? "按下组合键 · Esc 取消"
       : `${modifierKey} + ${displayKey(triggerKey)}`;
 
-  const appearance =
-    state === "conflict"
-      ? "filled"
-      : state === "recording"
-        ? "outline"
-        : "tint";
-
-  const color =
-    state === "conflict"
-      ? "warning"
-      : state === "recording"
-        ? "brand"
-        : "brand";
+  // 三态都用 tint 外观（淡底+柔色字），仅靠 color 区分：
+  //   static / recording -> brand（淡蓝）
+  //   conflict           -> warning（淡黄）
+  // 不用 filled，避免在浅色卡片列表中视觉过强、与周围控件失衡。
+  const appearance = state === "recording" ? "outline" : "tint";
+  const color = state === "conflict" ? "warning" : "brand";
 
   const className = [
     styles.comboBadge,
