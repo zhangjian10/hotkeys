@@ -13,7 +13,6 @@ import {
   saveConfig,
 } from "./lib/api";
 import { comboText, formatErr } from "./lib/utils";
-import type { DraftMode } from "./types";
 import { TOASTER_ID } from "./constants/app";
 import { useStyles } from "./styles/useStyles";
 
@@ -212,13 +211,13 @@ export default function App() {
   }, [recording, profile, activeProfile, config.profiles.length, cfg, flash]);
 
   /* ------------------------- 关键词 ------------------------- */
+  /** 把一个窗口标题以模糊匹配（`%title%`）形式加进当前 profile。 */
   const addKeyword = useCallback(
-    (value?: string, mode?: DraftMode) => {
+    (title: string) => {
       if (!profile) return;
-      const v = (value ?? "").trim();
+      const v = title.trim();
       if (!v) return;
-      const m: DraftMode = mode ?? "fuzzy";
-      const final = m === "fuzzy" && !v.includes("%") ? `%${v}%` : v;
+      const final = v.includes("%") ? v : `%${v}%`;
       if (profile.window_keywords.includes(final)) {
         flash("info", "该关键词已存在");
         return;
@@ -413,7 +412,6 @@ export default function App() {
         appVersion={APP_VERSION}
         onChangeInterval={onChangeInterval}
         onChangeDelay={onChangeDelay}
-        onAddKeyword={(value, mode) => addKeyword(value, mode)}
         onRemoveKeyword={removeKeyword}
         onPickWindow={() => setWindowPickerOpen(true)}
         onRevealConfig={reveal}

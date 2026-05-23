@@ -146,8 +146,7 @@ export function WindowPickerDialog({
               )}
             </div>
             <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-              提示：将使用窗口标题作为关键词；如要支持多个版本，可以在添加后手动改成
-              <code> %关键字% </code>形式以模糊匹配。
+              将以模糊匹配（包含此标题）的方式作为关键词加入当前 Profile。
             </Caption1>
           </DialogContent>
           <DialogActions>

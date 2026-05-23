@@ -7,14 +7,6 @@ members = [
 resolver = "2"
 
 [profile.release]
-# Build settings optimized for smallest binary size. Notes:
-# - opt-level = "z" minimizes size further than "s".
-# - lto = "fat" enables whole-program LTO across crates (better size savings when using multiple crates).
-# - debug = 0 removes debug info; if you need backtraces keep minimal debug symbols (e.g. =1).
-# - overflow-checks = false removes integer overflow checks in release for size and performance.
-# - codegen-units = 1 allows more cross-crate optimization (may slow compile but reduces size).
-# - panic = "abort" avoids including unwinding machinery.
-# - strip = true will ask cargo to strip the final binary (MSVC toolchains may behave differently).
 
 codegen-units = 1           # reduces binary size by ~2%
 debug = "full"              # No one needs an undebuggable release binary
