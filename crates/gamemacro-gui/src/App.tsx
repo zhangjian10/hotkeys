@@ -3,10 +3,13 @@ import { Toaster, useId } from "@fluentui/react-components";
 
 import {
   type HotkeyConfig,
+  daemonSpawn,
+  daemonStop,
   emptyHotkey,
   emptyProfile,
   loadConfig,
   revealConfig,
+  revealLog,
   saveConfig,
 } from "./lib/api";
 import { comboText, formatErr } from "./lib/utils";
@@ -19,6 +22,7 @@ import { useConfigState } from "./hooks/useConfigState";
 import { useFlash } from "./hooks/useFlash";
 import { useTryInput } from "./hooks/useTryInput";
 import { useRecorder } from "./hooks/useRecorder";
+import { useDaemonStatus } from "./hooks/useDaemonStatus";
 import {
   useActiveProfile,
   useVisibleHotkeys,
@@ -352,6 +356,18 @@ export default function App() {
     revealConfig().catch((e) => flash("error", formatErr(e)));
   }, [flash]);
 
+  /* ------------------------- Daemon 状态 / 控制 ------------------------- */
+  const daemon = useDaemonStatus();
+  const onSpawnDaemon = useCallback(() => {
+    void daemonSpawn().catch((e) => flash("error", formatErr(e)));
+  }, [flash]);
+  const onStopDaemon = useCallback(() => {
+    void daemonStop().catch((e) => flash("error", formatErr(e)));
+  }, [flash]);
+  const onRevealLog = useCallback(() => {
+    void revealLog().catch((e) => flash("error", formatErr(e)));
+  }, [flash]);
+
   const onChangeInterval = useCallback(
     (v: number) => cfg.patchProfile(activeProfile, { auto_input_interval_secs: v }),
     [cfg, activeProfile],
@@ -374,6 +390,10 @@ export default function App() {
         onDuplicateCurrent={duplicateCurrentProfile}
         onDeleteCurrent={deleteCurrentProfile}
         onOpenSettings={() => setSettingsOpen(true)}
+        daemon={daemon}
+        onSpawnDaemon={onSpawnDaemon}
+        onStopDaemon={onStopDaemon}
+        onRevealLog={onRevealLog}
       />
 
       <div className={styles.body}>

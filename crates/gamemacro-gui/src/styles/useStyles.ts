@@ -113,6 +113,42 @@ export const useStyles = makeStyles({
   },
   topBarSpacer: { flex: 1, minWidth: 0 },
 
+  /* ================= 顶栏：daemon 状态灯按钮 ================= */
+  statusBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    columnGap: "6px",
+    paddingInline: "8px",
+    height: "28px",
+    fontSize: "12px",
+  },
+  statusDot: {
+    display: "inline-block",
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    flexShrink: 0,
+    backgroundColor: tokens.colorNeutralForeground3,
+  },
+  statusDotRunning: {
+    backgroundColor: tokens.colorPaletteGreenForeground1,
+    boxShadow: `0 0 0 2px ${tokens.colorPaletteGreenBackground2}`,
+  },
+  statusDotInactive: {
+    backgroundColor: tokens.colorPaletteYellowForeground1,
+    boxShadow: `0 0 0 2px ${tokens.colorPaletteYellowBackground2}`,
+  },
+  statusDotDown: {
+    backgroundColor: tokens.colorNeutralForeground3,
+  },
+  statusMenuHeader: {
+    paddingInline: "12px",
+    paddingTop: "10px",
+    paddingBottom: "4px",
+    fontSize: "11.5px",
+    color: tokens.colorNeutralForeground3,
+  },
+
   /* ================= 主体（顶栏下方铺满） ================= */
   body: {
     flex: 1,

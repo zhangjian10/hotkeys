@@ -219,7 +219,299 @@ pub fn run() {
             list_windows,
             current_foreground_title,
             try_input,
+            daemon_status,
+            daemon_stop,
+            daemon_spawn,
+            reveal_log,
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 失败");
+}
+
+/* ============================================================================
+ * Daemon IPC（命名管道：\\.\pipe\gamemacro-daemon）
+ * ========================================================================== */
+
+#[derive(Serialize, Default)]
+pub struct DaemonStatus {
+    /// 进程在跑且 IPC 应答正常
+    pub running: bool,
+    /// 当前是否激活了某 profile（窗口命中）
+    pub active: bool,
+    /// 激活的 profile 名；未激活或未运行 = None
+    pub profile: Option<String>,
+    /// 进程 PID（仅 running 时有意义）
+    pub pid: Option<u32>,
+}
+
+/// 查询 daemon 状态。失败（连接不上 / 解析失败）= 视作 not running。
+/// 不抛 Err，方便前端 2 秒一次轮询不刷红。
+#[tauri::command]
+fn daemon_status() -> Result<DaemonStatus, String> {
+    match query_daemon_status() {
+        Some(s) => Ok(s),
+        None => Ok(DaemonStatus::default()),
+    }
+}
+
+/// 远程停止 daemon。
+#[tauri::command]
+fn daemon_stop() -> Result<(), String> {
+    let resp = ipc_round_trip("STOP\n").map_err(|e| format!("发送 STOP 失败：{e}"))?;
+    if resp.trim() == "OK" {
+        Ok(())
+    } else {
+        Err(format!("daemon 拒绝停止：{resp:?}"))
+    }
+}
+
+/// 启动 daemon：ShellExecute runas 同目录的 gamemacro-daemon.exe。
+/// daemon 自带 manifest requireAdministrator，所以一定会触发 UAC。
+#[tauri::command]
+fn daemon_spawn() -> Result<(), String> {
+    let exe = daemon_exe_path().ok_or_else(|| "找不到 gamemacro-daemon.exe".to_string())?;
+    spawn_elevated(&exe).map_err(|e| format!("启动后端失败：{e}"))
+}
+
+/// 在资源管理器中定位 daemon 日志：`%LOCALAPPDATA%\GameMacro\daemon.log`。
+#[tauri::command]
+fn reveal_log() -> Result<(), String> {
+    let path = log_file_path().ok_or_else(|| "无法定位 LOCALAPPDATA".to_string())?;
+    let target: &std::path::Path = if path.exists() {
+        path.as_path()
+    } else {
+        path.parent().unwrap_or(std::path::Path::new("."))
+    };
+    open_in_explorer(target).map_err(|e| format!("打开失败：{e}"))
+}
+
+fn log_file_path() -> Option<PathBuf> {
+    let base = std::env::var_os("LOCALAPPDATA")?;
+    let mut p = PathBuf::from(base);
+    p.push("GameMacro");
+    p.push("daemon.log");
+    Some(p)
+}
+
+fn daemon_exe_path() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let parent = exe.parent()?;
+    let candidate = parent.join("gamemacro-daemon.exe");
+    if candidate.exists() {
+        return Some(candidate);
+    }
+    // 开发期 fallback：cargo target/debug 同目录
+    Some(candidate)
+}
+
+#[cfg(target_os = "windows")]
+fn query_daemon_status() -> Option<DaemonStatus> {
+    let resp = ipc_round_trip("STATUS\n").ok()?;
+    parse_status_json(resp.trim())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn query_daemon_status() -> Option<DaemonStatus> {
+    None
+}
+
+/// 用最朴素的方式从 daemon 返回的 JSON 里抠出几个字段。
+/// daemon 端格式固定，不需要完整 JSON 解析器。
+fn parse_status_json(s: &str) -> Option<DaemonStatus> {
+    let active = json_bool(s, "active").unwrap_or(false);
+    let running = json_bool(s, "running").unwrap_or(false);
+    let profile = json_string(s, "profile");
+    let pid = json_number(s, "pid").and_then(|n| u32::try_from(n).ok());
+    Some(DaemonStatus {
+        running,
+        active,
+        profile,
+        pid,
+    })
+}
+
+fn json_bool(s: &str, key: &str) -> Option<bool> {
+    let needle = format!("\"{key}\":");
+    let i = s.find(&needle)?;
+    let rest = &s[i + needle.len()..].trim_start();
+    if rest.starts_with("true") {
+        Some(true)
+    } else if rest.starts_with("false") {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+fn json_number(s: &str, key: &str) -> Option<i64> {
+    let needle = format!("\"{key}\":");
+    let i = s.find(&needle)?;
+    let rest = s[i + needle.len()..].trim_start();
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit() && c != '-')
+        .unwrap_or(rest.len());
+    rest[..end].parse().ok()
+}
+
+fn json_string(s: &str, key: &str) -> Option<String> {
+    let needle = format!("\"{key}\":");
+    let i = s.find(&needle)?;
+    let rest = s[i + needle.len()..].trim_start();
+    if rest.starts_with("null") {
+        return None;
+    }
+    if !rest.starts_with('"') {
+        return None;
+    }
+    let body = &rest[1..];
+    // 简化：daemon 这边不会写出转义为 \" 的合法标题（Windows 标题极少含 "），
+    // 但仍处理一下 \" 与 \\ 以稳妥
+    let mut out = String::with_capacity(body.len());
+    let mut chars = body.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => return Some(out),
+            '\\' => match chars.next()? {
+                '"' => out.push('"'),
+                '\\' => out.push('\\'),
+                'n' => out.push('\n'),
+                'r' => out.push('\r'),
+                't' => out.push('\t'),
+                other => out.push(other),
+            },
+            other => out.push(other),
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn ipc_round_trip(req: &str) -> Result<String, String> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr;
+    use winapi::shared::minwindef::DWORD;
+    use winapi::um::fileapi::{CreateFileW, OPEN_EXISTING, ReadFile, WriteFile};
+    use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+    use winapi::um::winnt::{FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
+
+    const PIPE_NAME: &str = r"\\.\pipe\gamemacro-daemon";
+    let wide: Vec<u16> = OsStr::new(PIPE_NAME)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let handle = unsafe {
+        CreateFileW(
+            wide.as_ptr(),
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            ptr::null_mut(),
+            OPEN_EXISTING,
+            0,
+            ptr::null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        return Err("管道未就绪（daemon 未运行？）".into());
+    }
+
+    // 写请求
+    let mut written: DWORD = 0;
+    let ok = unsafe {
+        WriteFile(
+            handle,
+            req.as_ptr() as *const _,
+            req.len() as DWORD,
+            &mut written,
+            ptr::null_mut(),
+        )
+    };
+    if ok == 0 {
+        unsafe { CloseHandle(handle) };
+        return Err("WriteFile 失败".into());
+    }
+
+    // 读响应（读到 EOF / 第一行）
+    let mut acc: Vec<u8> = Vec::with_capacity(256);
+    let mut buf = [0u8; 512];
+    loop {
+        let mut read: DWORD = 0;
+        let ok = unsafe {
+            ReadFile(
+                handle,
+                buf.as_mut_ptr() as *mut _,
+                buf.len() as DWORD,
+                &mut read,
+                ptr::null_mut(),
+            )
+        };
+        if ok == 0 || read == 0 {
+            break;
+        }
+        acc.extend_from_slice(&buf[..read as usize]);
+        if acc.contains(&b'\n') || acc.len() > 8192 {
+            break;
+        }
+    }
+
+    unsafe { CloseHandle(handle) };
+    String::from_utf8(acc).map_err(|e| format!("响应非 UTF-8：{e}"))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn ipc_round_trip(_req: &str) -> Result<String, String> {
+    Err("仅 Windows 支持".into())
+}
+
+#[cfg(target_os = "windows")]
+fn spawn_elevated(exe: &std::path::Path) -> std::io::Result<()> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr;
+    use winapi::um::shellapi::ShellExecuteW;
+
+    let verb: Vec<u16> = OsStr::new("runas")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let file: Vec<u16> = exe
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let working = exe
+        .parent()
+        .map(|p| {
+            p.as_os_str()
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect::<Vec<u16>>()
+        })
+        .unwrap_or_else(|| vec![0]);
+
+    // ShellExecuteW 返回值 > 32 = 成功
+    let h = unsafe {
+        ShellExecuteW(
+            ptr::null_mut(),
+            verb.as_ptr(),
+            file.as_ptr(),
+            ptr::null(),
+            working.as_ptr(),
+            1, // SW_SHOWNORMAL（windows 子系统的 daemon 实际上不会显示窗口）
+        )
+    };
+    if (h as usize) > 32 {
+        Ok(())
+    } else {
+        Err(std::io::Error::other(format!(
+            "ShellExecuteW returned {}",
+            h as usize
+        )))
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn spawn_elevated(_exe: &std::path::Path) -> std::io::Result<()> {
+    Err(std::io::Error::other("仅 Windows 支持"))
 }

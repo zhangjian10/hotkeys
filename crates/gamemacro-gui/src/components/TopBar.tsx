@@ -18,16 +18,20 @@ import {
   MenuPopover,
   MenuTrigger,
   Tooltip,
+  mergeClasses,
 } from "@fluentui/react-components";
 import {
   Checkmark20Regular,
   Copy20Regular,
   Delete20Regular,
+  DocumentBulletList20Regular,
   Edit20Regular,
+  Play20Regular,
   Settings20Regular,
+  Stop20Regular,
 } from "@fluentui/react-icons";
 
-import type { Profile } from "../lib/api";
+import type { DaemonStatus, Profile } from "../lib/api";
 import { useStyles } from "../styles/useStyles";
 
 export interface TopBarProps {
@@ -39,6 +43,33 @@ export interface TopBarProps {
   onDuplicateCurrent: () => void;
   onDeleteCurrent: () => void;
   onOpenSettings: () => void;
+
+  /** daemon 状态；null 表示首次轮询尚未完成。 */
+  daemon: DaemonStatus | null;
+  onSpawnDaemon: () => void;
+  onStopDaemon: () => void;
+  onRevealLog: () => void;
+}
+
+type DotState = "running" | "inactive" | "down" | "checking";
+
+function dotState(s: DaemonStatus | null): DotState {
+  if (s === null) return "checking";
+  if (!s.running) return "down";
+  return s.active ? "running" : "inactive";
+}
+
+function dotLabel(state: DotState, profile: string | null): string {
+  switch (state) {
+    case "checking":
+      return "检查中…";
+    case "down":
+      return "后端未运行";
+    case "inactive":
+      return "等待目标窗口";
+    case "running":
+      return profile ? `运行中 · ${profile}` : "运行中";
+  }
 }
 
 /**
@@ -54,10 +85,16 @@ export function TopBar({
   onDuplicateCurrent,
   onDeleteCurrent,
   onOpenSettings,
+  daemon,
+  onSpawnDaemon,
+  onStopDaemon,
+  onRevealLog,
 }: TopBarProps) {
   const styles = useStyles();
   const current = profiles[activeProfile];
   const canDelete = profiles.length > 1;
+  const state = dotState(daemon);
+  const label = dotLabel(state, daemon?.profile ?? null);
 
   // 「+ 新游戏」mini Dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -223,6 +260,42 @@ export function TopBar({
       </Dialog>
 
       <span className={styles.topBarSpacer} />
+
+      <Menu>
+        <MenuTrigger disableButtonEnhancement>
+          <MenuButton appearance="subtle" size="small" className={styles.statusBtn}>
+            <span
+              className={mergeClasses(
+                styles.statusDot,
+                state === "running" && styles.statusDotRunning,
+                state === "inactive" && styles.statusDotInactive,
+                state === "down" && styles.statusDotDown,
+              )}
+            />
+            {label}
+          </MenuButton>
+        </MenuTrigger>
+        <MenuPopover>
+          <div className={styles.statusMenuHeader}>
+            {daemon?.pid ? `PID ${daemon.pid}` : "GameMacro 后端服务"}
+          </div>
+          <MenuList>
+            {state === "down" ? (
+              <MenuItem icon={<Play20Regular />} onClick={onSpawnDaemon}>
+                启动后端（需要管理员权限）
+              </MenuItem>
+            ) : (
+              <MenuItem icon={<Stop20Regular />} onClick={onStopDaemon}>
+                停止后端
+              </MenuItem>
+            )}
+            <MenuDivider />
+            <MenuItem icon={<DocumentBulletList20Regular />} onClick={onRevealLog}>
+              打开日志位置
+            </MenuItem>
+          </MenuList>
+        </MenuPopover>
+      </Menu>
 
       <Tooltip content="设置" relationship="label">
         <Button

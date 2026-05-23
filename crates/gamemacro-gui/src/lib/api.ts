@@ -125,6 +125,37 @@ export async function tryInput(text: string): Promise<void> {
   await invoke("try_input", { text });
 }
 
+/* ============================================================================
+ * Daemon IPC（命名管道经由 Tauri 命令转发）
+ * ========================================================================== */
+
+export interface DaemonStatus {
+  running: boolean;
+  active: boolean;
+  profile: string | null;
+  pid: number | null;
+}
+
+/** 查询后端状态。失败也总是 resolve（值为 not running），便于轮询。 */
+export async function daemonStatus(): Promise<DaemonStatus> {
+  return invoke<DaemonStatus>("daemon_status");
+}
+
+/** 发 STOP 指令请求 daemon 退出。 */
+export async function daemonStop(): Promise<void> {
+  await invoke("daemon_stop");
+}
+
+/** 启动后端：ShellExecute runas，会触发 UAC。 */
+export async function daemonSpawn(): Promise<void> {
+  await invoke("daemon_spawn");
+}
+
+/** 在资源管理器中打开 daemon 日志文件位置。 */
+export async function revealLog(): Promise<void> {
+  await invoke("reveal_log");
+}
+
 export function emptyProfile(name = "新建配置"): Profile {
   return {
     name,
