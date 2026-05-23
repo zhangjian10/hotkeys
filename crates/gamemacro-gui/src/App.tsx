@@ -21,8 +21,6 @@ import { useTryInput } from "./hooks/useTryInput";
 import { useRecorder } from "./hooks/useRecorder";
 import {
   useActiveProfile,
-  useDuplicateCombo,
-  useEditingHotkey,
   useVisibleHotkeys,
 } from "./hooks/useDerived";
 
@@ -32,7 +30,6 @@ import { TopBar } from "./components/TopBar";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { NoProfilesEmpty } from "./components/NoProfilesEmpty";
 import { HotkeysPage } from "./components/pages/HotkeysPage";
-import { EditorDrawer } from "./components/EditorDrawer";
 import { WindowPickerDialog } from "./components/WindowPickerDialog";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { CountdownDialog } from "./components/CountdownDialog";
@@ -58,22 +55,21 @@ export default function App() {
 
   const [path, setPath] = useState("");
   const [activeProfile, setActiveProfile] = useState(-1);
-  const [editingHotkey, setEditingHotkey] = useState(-1);
+  /** 当前内联展开编辑的热键 index；-1 表示全部折叠 */
+  const [expandedHotkey, setExpandedHotkey] = useState(-1);
   const [hotkeyQuery, setHotkeyQuery] = useState("");
   const [windowPickerOpen, setWindowPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmTask | null>(null);
 
   const profile = useActiveProfile(config, activeProfile);
-  const editing = useEditingHotkey(profile, editingHotkey);
-  const duplicateCombo = useDuplicateCombo(profile, editing, editingHotkey);
   const visibleHotkeys = useVisibleHotkeys(profile, hotkeyQuery);
 
   /* ------------------------- 录制 ------------------------- */
   const recorder = useRecorder({
     flash,
     onCaptured: (combo) => {
-      cfg.patchHotkey(activeProfile, editingHotkey, {
+      cfg.patchHotkey(activeProfile, expandedHotkey, {
         modifier_key: combo.modifier,
         trigger_key: combo.trigger,
       });
@@ -131,7 +127,7 @@ export default function App() {
   /* ------------------------- Profile 操作 ------------------------- */
   const selectProfile = useCallback((i: number) => {
     setActiveProfile(i);
-    setEditingHotkey(-1);
+    setExpandedHotkey(-1);
   }, []);
 
   const createProfile = useCallback(
@@ -152,6 +148,7 @@ export default function App() {
       }
       cfg.patch((c) => ({ ...c, profiles: [...c.profiles, draft] }));
       setActiveProfile(newIndex);
+      setExpandedHotkey(-1);
     },
     [recording, config.profiles.length, cfg, flash],
   );
@@ -179,6 +176,7 @@ export default function App() {
     };
     cfg.patch((c) => ({ ...c, profiles: [...c.profiles, copy] }));
     setActiveProfile(newIndex);
+    setExpandedHotkey(-1);
   }, [recording, profile, config.profiles.length, cfg, flash]);
 
   const deleteCurrentProfile = useCallback(() => {
@@ -204,6 +202,7 @@ export default function App() {
           if (cur > idx) return cur - 1;
           return cur;
         });
+        setExpandedHotkey(-1);
       },
     });
   }, [recording, profile, activeProfile, config.profiles.length, cfg, flash]);
@@ -252,8 +251,59 @@ export default function App() {
     cfg.patchProfile(activeProfile, {
       hotkeys: [...profile.hotkeys, emptyHotkey()],
     });
-    setEditingHotkey(newIndex);
+    setExpandedHotkey(newIndex);
   }, [recording, profile, cfg, activeProfile, flash]);
+
+  /** 折叠/展开切换；切到不同卡片时收起旧卡片，必要时停止当前录制 */
+  const toggleExpandHotkey = useCallback(
+    (i: number) => {
+      if (recording && i !== expandedHotkey) {
+        // 切到别的卡片要先停止录制
+        recorder.stop();
+      }
+      setExpandedHotkey((cur) => (cur === i ? -1 : i));
+    },
+    [recording, expandedHotkey, recorder],
+  );
+
+  /** 点击 ComboBadge：先确保该卡片处于展开态，再 toggle 录制 */
+  const toggleRecordHotkey = useCallback(
+    (i: number) => {
+      if (expandedHotkey !== i) {
+        setExpandedHotkey(i);
+      }
+      recorder.toggle();
+    },
+    [expandedHotkey, recorder],
+  );
+
+  const patchHotkeyAt = useCallback(
+    (i: number, patch: Partial<HotkeyConfig>) =>
+      cfg.patchHotkey(activeProfile, i, patch),
+    [cfg, activeProfile],
+  );
+
+  const duplicateHotkey = useCallback(
+    (i: number) => {
+      if (recording) {
+        flash("info", "录制中暂不能复制热键");
+        return;
+      }
+      if (!profile) return;
+      const target = profile.hotkeys[i];
+      if (!target) return;
+      const copy = { ...target };
+      cfg.patchProfile(activeProfile, {
+        hotkeys: [
+          ...profile.hotkeys.slice(0, i + 1),
+          copy,
+          ...profile.hotkeys.slice(i + 1),
+        ],
+      });
+      setExpandedHotkey(i + 1);
+    },
+    [recording, profile, cfg, activeProfile, flash],
+  );
 
   const deleteHotkey = useCallback(
     (i: number) => {
@@ -266,25 +316,36 @@ export default function App() {
       cfg.patchProfile(activeProfile, {
         hotkeys: profile.hotkeys.filter((_, idx) => idx !== i),
       });
-      if (editingHotkey === i) setEditingHotkey(-1);
-      else if (editingHotkey > i) setEditingHotkey((cur) => cur - 1);
+      setExpandedHotkey((cur) => {
+        if (cur === i) return -1;
+        if (cur > i) return cur - 1;
+        return cur;
+      });
       if (target) {
         flash("info", `已删除「${target.description || comboText(target)}」`);
       }
     },
-    [recording, profile, cfg, activeProfile, editingHotkey, flash],
+    [recording, profile, cfg, activeProfile, flash],
   );
 
-  const patchEditing = useCallback(
-    (patch: Partial<HotkeyConfig>) =>
-      cfg.patchHotkey(activeProfile, editingHotkey, patch),
-    [cfg, activeProfile, editingHotkey],
+  const moveHotkey = useCallback(
+    (from: number, to: number) => {
+      if (!profile) return;
+      if (to < 0 || to >= profile.hotkeys.length) return;
+      const next = [...profile.hotkeys];
+      const [item] = next.splice(from, 1);
+      if (!item) return;
+      next.splice(to, 0, item);
+      cfg.patchProfile(activeProfile, { hotkeys: next });
+      setExpandedHotkey((cur) => {
+        if (cur === from) return to;
+        if (from < cur && cur <= to) return cur - 1;
+        if (to <= cur && cur < from) return cur + 1;
+        return cur;
+      });
+    },
+    [profile, cfg, activeProfile],
   );
-
-  const closeDrawer = useCallback(() => {
-    if (recording) recorder.stop();
-    setEditingHotkey(-1);
-  }, [recording, recorder]);
 
   /* ------------------------- 杂项 ------------------------- */
   const reveal = useCallback(() => {
@@ -325,32 +386,25 @@ export default function App() {
                 total={profile.hotkeys.length}
                 query={hotkeyQuery}
                 recording={recording}
+                expandedIndex={expandedHotkey}
                 onChangeQuery={setHotkeyQuery}
                 onAdd={addHotkey}
-                onEdit={setEditingHotkey}
-                onDelete={deleteHotkey}
+                onToggleExpand={toggleExpandHotkey}
+                onToggleRecord={toggleRecordHotkey}
+                onChange={patchHotkeyAt}
                 onTry={tryInput.start}
+                onDuplicate={duplicateHotkey}
+                onDelete={deleteHotkey}
+                onMoveUp={(i) => moveHotkey(i, i - 1)}
+                onMoveDown={(i) => moveHotkey(i, i + 1)}
                 onGoWindow={() => setSettingsOpen(true)}
               />
             </div>
           </div>
         ) : (
-          <NoProfilesEmpty
-            onCreate={() => createProfile(`配置 1`, "")}
-          />
+          <NoProfilesEmpty onCreate={() => createProfile(`配置 1`, "")} />
         )}
       </div>
-
-      <EditorDrawer
-        open={!!editing}
-        hotkey={editing}
-        recording={recording}
-        duplicate={duplicateCombo}
-        onClose={closeDrawer}
-        onChange={patchEditing}
-        onToggleRecord={recorder.toggle}
-        onTry={() => editing && tryInput.start(editing.input_string)}
-      />
 
       <SettingsDialog
         open={settingsOpen}

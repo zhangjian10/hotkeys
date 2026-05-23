@@ -227,67 +227,136 @@ export const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
   },
 
-  /* ================= Hotkeys 列表（仍保留旧 Row，Sub-PR C 替换为 Card） ================= */
-  hkRow: {
-    display: "flex",
-    alignItems: "center",
-    columnGap: "16px",
-    minHeight: "64px",
-    paddingInline: "16px",
-    paddingBlock: "10px",
-    cursor: "pointer",
-    "&:hover": { backgroundColor: tokens.colorSubtleBackgroundHover },
-  },
-  hkLine: {
-    minWidth: 0,
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    rowGap: "4px",
-  },
-  hkSentence: {
-    display: "flex",
-    alignItems: "center",
-    columnGap: "6px",
-    fontSize: "13.5px",
-    color: tokens.colorNeutralForeground1,
-    flexWrap: "wrap",
-  },
-  hkMuted: { color: tokens.colorNeutralForeground3 },
-  hkInputPreview: {
-    fontFamily: tokens.fontFamilyMonospace,
-    fontSize: "12px",
-    color: tokens.colorNeutralForeground1,
-    backgroundColor: tokens.colorNeutralBackground2,
-    paddingInline: "6px",
-    paddingBlock: "1px",
-    borderRadius: "4px",
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    maxWidth: "260px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  hkDesc: {
-    fontSize: "12px",
-    color: tokens.colorNeutralForeground3,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  hkActions: { display: "flex", columnGap: "4px", flexShrink: 0 },
+  /* ================= 热键搜索条 + 卡片列表 ================= */
   hkSearch: {
     paddingTop: "4px",
-    paddingBottom: "8px",
+    paddingBottom: "4px",
     display: "flex",
     alignItems: "center",
     columnGap: "12px",
   },
-  hkListCard: {
+  hkMuted: { color: tokens.colorNeutralForeground3 },
+
+  /* ================= 单条热键卡片 ================= */
+  hkCard: {
     backgroundColor: tokens.colorNeutralBackground1,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: "7px",
+    borderRadius: "8px",
     overflow: "hidden",
+    cursor: "pointer",
+    transition: "border-color 120ms ease, box-shadow 120ms ease",
+    "&:hover": {
+      border: `1px solid ${tokens.colorNeutralStroke1}`,
+    },
+    "&:focus-visible": {
+      outline: `2px solid ${tokens.colorStrokeFocus2}`,
+      outlineOffset: "1px",
+    },
+  },
+  hkCardExpanded: {
+    border: `1px solid ${tokens.colorBrandStroke1}`,
+    boxShadow: tokens.shadow4,
+    cursor: "default",
+  },
+  hkCardHead: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: "12px",
+    paddingInline: "12px",
+    paddingBlock: "10px",
+    minHeight: "56px",
+  },
+  hkCardText: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    rowGap: "2px",
+  },
+  hkCardTitle: {
+    fontSize: "13.5px",
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  hkCardPreview: {
+    fontSize: "12px",
+    color: tokens.colorNeutralForeground3,
+    fontFamily: tokens.fontFamilyMonospace,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  hkCardBody: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: "12px",
+    paddingInline: "16px",
+    paddingTop: "8px",
+    paddingBottom: "16px",
+    borderTop: `1px solid ${tokens.colorNeutralStroke3}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    cursor: "default",
+  },
+  hkCardHint: {
+    color: tokens.colorPaletteYellowForeground1,
+    paddingInline: "4px",
+  },
+  hkCardTextarea: {
+    fontFamily: tokens.fontFamilyMonospace,
+    "& textarea": {
+      minHeight: "84px",
+      maxHeight: "240px",
+    },
+  },
+  hkCardControls: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: "16px",
+    flexWrap: "wrap",
+  },
+  hkCardSwitch: {
+    flexShrink: 0,
+  },
+  hkCardOverride: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: "8px",
+    fontSize: "12.5px",
+    flexWrap: "wrap",
+  },
+  hkCardActions: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: "8px",
+    paddingTop: "4px",
+  },
+
+  /* ================= ComboBadge ================= */
+  comboBadge: {
+    cursor: "pointer",
+    fontFamily: tokens.fontFamilyMonospace,
+    letterSpacing: "0.02em",
+    paddingInline: "10px",
+    height: "28px",
+    "&:focus-visible": {
+      outline: `2px solid ${tokens.colorStrokeFocus2}`,
+      outlineOffset: "1px",
+    },
+  },
+  comboBadgeRecording: {
+    animationName: {
+      "0%": { boxShadow: `0 0 0 0 ${tokens.colorPaletteRedBorder1}` },
+      "70%": { boxShadow: `0 0 0 6px transparent` },
+      "100%": { boxShadow: `0 0 0 0 transparent` },
+    },
+    animationDuration: "1.6s",
+    animationIterationCount: "infinite",
+  },
+  comboBadgeConflict: {
+    cursor: "pointer",
   },
 
   /* ================= 当前活动窗口实时显示（设置 Dialog 内复用） ================= */
@@ -354,65 +423,7 @@ export const useStyles = makeStyles({
     textAlign: "center",
   },
 
-  /* ================= EditorDrawer（Sub-PR C 删） ================= */
-  recordCard: {
-    display: "flex",
-    flexDirection: "column",
-    rowGap: "12px",
-    padding: "16px",
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: "7px",
-    backgroundColor: tokens.colorNeutralBackground2,
-  },
-  recordHeader: {
-    display: "flex",
-    alignItems: "center",
-    columnGap: "10px",
-    flexWrap: "wrap",
-  },
-  recordCombo: {
-    display: "flex",
-    alignItems: "center",
-    columnGap: "6px",
-  },
-  recordButton: { width: "100%" },
-  recordWarn: { color: tokens.colorPaletteYellowForeground1 },
-  manualToggle: {
-    appearance: "none",
-    background: "transparent",
-    border: "none",
-    color: tokens.colorBrandForegroundLink,
-    cursor: "pointer",
-    fontSize: "12px",
-    paddingInline: "4px",
-    paddingBlock: "2px",
-    textAlign: "left",
-    "&:hover": { textDecoration: "underline" },
-  },
-  manualGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
-  },
-  drawerForm: {
-    display: "flex",
-    flexDirection: "column",
-    rowGap: "16px",
-  },
-  drawerActions: {
-    display: "flex",
-    justifyContent: "flex-end",
-    paddingBlock: "4px",
-  },
-  drawerTextarea: {
-    fontFamily: tokens.fontFamilyMonospace,
-    "& textarea": {
-      minHeight: "120px",
-      maxHeight: "240px",
-    },
-  },
-
-  /* ================= KeyChip ================= */
+  /* ================= KeyChip（备用，目前未使用，保留以便外部组件复用） ================= */
   keyChip: {
     display: "inline-flex",
     alignItems: "center",

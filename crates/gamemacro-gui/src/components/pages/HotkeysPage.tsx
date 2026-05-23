@@ -11,7 +11,7 @@ import {
 } from "@fluentui/react-icons";
 import type { HotkeyConfig, Profile } from "../../lib/api";
 import { useStyles } from "../../styles/useStyles";
-import { HotkeyRow } from "../HotkeyRow";
+import { HotkeyCard } from "../HotkeyCard";
 
 export interface HotkeysPageProps {
   profile: Profile;
@@ -19,18 +19,24 @@ export interface HotkeysPageProps {
   total: number;
   query: string;
   recording: boolean;
+  /** 当前展开内联编辑的热键 index；-1 表示无 */
+  expandedIndex: number;
   onChangeQuery: (v: string) => void;
   onAdd: () => void;
-  onEdit: (i: number) => void;
-  onDelete: (i: number) => void;
+  onToggleExpand: (i: number) => void;
+  onToggleRecord: (i: number) => void;
+  onChange: (i: number, patch: Partial<HotkeyConfig>) => void;
   onTry: (text: string) => void;
-  /** 当 profile 没有窗口关键词时，引导用户去打开设置 Dialog 配。 */
+  onDuplicate: (i: number) => void;
+  onDelete: (i: number) => void;
+  onMoveUp: (i: number) => void;
+  onMoveDown: (i: number) => void;
+  /** 当 profile 没有窗口关键词时引导用户打开设置 Dialog */
   onGoWindow: () => void;
 }
 
 /**
- * 单页主体：顶部搜索 + 「+ 新增」、下方一张卡片承载所有热键行。
- * 当前仍使用旧 HotkeyRow，Sub-PR C 替换为可内联展开的 HotkeyCard。
+ * 单页主体：搜索 + 添加按钮 + 卡片列表 + 「+ 新增热键」底部按钮。
  */
 export function HotkeysPage({
   profile,
@@ -38,15 +44,22 @@ export function HotkeysPage({
   total,
   recording,
   query,
+  expandedIndex,
   onChangeQuery,
   onAdd,
-  onEdit,
-  onDelete,
+  onToggleExpand,
+  onToggleRecord,
+  onChange,
   onTry,
+  onDuplicate,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
   onGoWindow,
 }: HotkeysPageProps) {
   const styles = useStyles();
   const noKeyword = profile.window_keywords.length === 0;
+  const profileInterval = profile.auto_input_interval_secs;
 
   return (
     <>
@@ -93,35 +106,50 @@ export function HotkeysPage({
         </Button>
       </div>
 
-      <div className={styles.hkListCard}>
-        {hotkeys.length === 0 ? (
-          <div className={styles.empty}>
-            <KeyboardLayoutFloat20Regular style={{ fontSize: 28 }} />
-            <Subtitle2>
-              {total === 0 ? "还没有热键" : "没有匹配的热键"}
-            </Subtitle2>
-            <Caption1>
-              {total === 0
-                ? "点击右上角「添加热键」创建第一条"
-                : "尝试换一个关键词"}
-            </Caption1>
-          </div>
-        ) : (
-          hotkeys.map((item, idx) => (
-            <div key={item.index}>
-              {idx > 0 && <div className={styles.rowDivider} />}
-              <HotkeyRow
+      {hotkeys.length === 0 ? (
+        <div className={styles.empty}>
+          <KeyboardLayoutFloat20Regular style={{ fontSize: 28 }} />
+          <Subtitle2>{total === 0 ? "还没有热键" : "没有匹配的热键"}</Subtitle2>
+          <Caption1>
+            {total === 0
+              ? "点击右上角「添加热键」创建第一条"
+              : "尝试换一个关键词"}
+          </Caption1>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", rowGap: 8 }}>
+          {hotkeys.map((item) => {
+            const isExpanded = item.index === expandedIndex;
+            const isDuplicate = profile.hotkeys.some(
+              (h, j) =>
+                j !== item.index &&
+                h.modifier_key === item.hotkey.modifier_key &&
+                h.trigger_key === item.hotkey.trigger_key,
+            );
+
+            return (
+              <HotkeyCard
+                key={item.index}
                 hotkey={item.hotkey}
                 index={item.index}
-                disabled={recording}
-                onEdit={onEdit}
-                onDelete={onDelete}
+                total={profile.hotkeys.length}
+                expanded={isExpanded}
+                recording={recording && item.index === expandedIndex}
+                duplicate={isDuplicate}
+                profileIntervalSecs={profileInterval}
+                onToggleExpand={() => onToggleExpand(item.index)}
+                onToggleRecord={() => onToggleRecord(item.index)}
+                onChange={(patch) => onChange(item.index, patch)}
                 onTry={onTry}
+                onDuplicate={() => onDuplicate(item.index)}
+                onDelete={() => onDelete(item.index)}
+                onMoveUp={() => onMoveUp(item.index)}
+                onMoveDown={() => onMoveDown(item.index)}
               />
-            </div>
-          ))
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
