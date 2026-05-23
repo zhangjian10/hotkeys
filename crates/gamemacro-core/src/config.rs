@@ -18,6 +18,21 @@ pub struct HotkeyConfig {
     /// 若为 false，按一次只输入一次，不入循环。
     #[serde(default = "default_true")]
     pub repeat: bool,
+    /// 覆盖此条热键专属的循环间隔（秒）。None 时使用 profile 的 auto_input_interval_secs。
+    /// 仅在 `repeat = true` 时生效。
+    #[serde(default)]
+    pub interval_secs_override: Option<u64>,
+}
+
+impl HotkeyConfig {
+    /// 计算本条热键真实生效的循环间隔（秒）。
+    /// 优先使用 `interval_secs_override`，否则回退到 profile 的 `auto_input_interval_secs`。
+    /// 下限固定为 1 秒——0 会让 tokio interval 退化为 100% CPU 自旋，必须夹住。
+    pub fn effective_interval_secs(&self, profile: &Profile) -> u64 {
+        self.interval_secs_override
+            .unwrap_or(profile.auto_input_interval_secs)
+            .max(1)
+    }
 }
 
 /// 一个 Profile：通常对应某一款游戏 / 某一类窗口
@@ -256,5 +271,100 @@ repeat = false
 "#;
         let cfg: Config = toml::from_str(toml_str).expect("parse");
         assert!(!cfg.profiles[0].hotkeys[0].repeat);
+    }
+
+    #[test]
+    fn hotkey_interval_override_defaults_to_none() {
+        let toml_str = r#"
+[[profiles]]
+name = "T"
+window_keywords = ["x"]
+auto_input_interval_secs = 3
+input_delay_millis = 50
+
+[[profiles.hotkeys]]
+modifier_key = "Ctrl"
+trigger_key = "X"
+input_string = "-ss"
+"#;
+        let cfg: Config = toml::from_str(toml_str).expect("parse");
+        assert_eq!(cfg.profiles[0].hotkeys[0].interval_secs_override, None);
+    }
+
+    #[test]
+    fn hotkey_interval_override_can_be_set() {
+        let toml_str = r#"
+[[profiles]]
+name = "T"
+window_keywords = ["x"]
+auto_input_interval_secs = 3
+input_delay_millis = 50
+
+[[profiles.hotkeys]]
+modifier_key = "Ctrl"
+trigger_key = "X"
+input_string = "-ss"
+interval_secs_override = 10
+"#;
+        let cfg: Config = toml::from_str(toml_str).expect("parse");
+        assert_eq!(cfg.profiles[0].hotkeys[0].interval_secs_override, Some(10));
+    }
+
+    #[test]
+    fn hotkey_effective_interval_falls_back_to_profile() {
+        let p = Profile {
+            name: "T".into(),
+            window_keywords: vec!["x".into()],
+            hotkeys: vec![HotkeyConfig {
+                modifier_key: "Ctrl".into(),
+                trigger_key: "X".into(),
+                input_string: "-ss".into(),
+                description: None,
+                repeat: true,
+                interval_secs_override: None,
+            }],
+            auto_input_interval_secs: 7,
+            input_delay_millis: 50,
+        };
+        assert_eq!(p.hotkeys[0].effective_interval_secs(&p), 7);
+    }
+
+    #[test]
+    fn hotkey_effective_interval_uses_override_when_present() {
+        let p = Profile {
+            name: "T".into(),
+            window_keywords: vec!["x".into()],
+            hotkeys: vec![HotkeyConfig {
+                modifier_key: "Ctrl".into(),
+                trigger_key: "X".into(),
+                input_string: "-ss".into(),
+                description: None,
+                repeat: true,
+                interval_secs_override: Some(2),
+            }],
+            auto_input_interval_secs: 7,
+            input_delay_millis: 50,
+        };
+        assert_eq!(p.hotkeys[0].effective_interval_secs(&p), 2);
+    }
+
+    #[test]
+    fn hotkey_effective_interval_clamps_zero_to_one() {
+        let p = Profile {
+            name: "T".into(),
+            window_keywords: vec!["x".into()],
+            hotkeys: vec![HotkeyConfig {
+                modifier_key: "Ctrl".into(),
+                trigger_key: "X".into(),
+                input_string: "-ss".into(),
+                description: None,
+                repeat: true,
+                interval_secs_override: Some(0),
+            }],
+            auto_input_interval_secs: 7,
+            input_delay_millis: 50,
+        };
+        // 0 秒会让 tokio interval panic / 100% CPU；必须夹到至少 1 秒
+        assert_eq!(p.hotkeys[0].effective_interval_secs(&p), 1);
     }
 }
