@@ -150,7 +150,14 @@ export const useStyles = makeStyles({
     overflow: "hidden",
     backgroundColor: tokens.colorNeutralBackground1,
   },
-  scroll: { flex: 1, minHeight: 0, overflowY: "auto" },
+  scroll: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    // 永远为滚动条预留宽度，避免内容跨过 viewport 高度时滚动条出现/消失
+    // 让以 marginInline:auto 居中的 scrollInner 横向抖动。Tauri webview2 (Edge) 必支持。
+    scrollbarGutter: "stable",
+  },
   scrollInner: {
     width: "100%",
     maxWidth: "1024px",
