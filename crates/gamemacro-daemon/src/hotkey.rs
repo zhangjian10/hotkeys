@@ -1,3 +1,4 @@
+use crate::log_info;
 use crate::loop_runtime::LoopHandle;
 use crate::state::AppState;
 use gamemacro_core::{HotkeyConfig, Profile, string_to_rdev_key};
@@ -70,7 +71,7 @@ impl HotkeyManager {
         let label = hotkey.input_string.replace('\n', " ");
 
         if !hotkey.repeat {
-            println!("Hotkey (once): {}", label);
+            log_info!("Hotkey (once): {}", label);
             AppState::with_loop_runtime(|rt| rt.submit_once(hotkey.input_string.clone(), delay_ms));
             return;
         }
@@ -78,10 +79,10 @@ impl HotkeyManager {
         let mut guard = active_loops_lock();
         let map = guard.as_mut().expect("ACTIVE_LOOPS initialized");
         if let Some(handle) = map.remove(&key) {
-            println!("stop {}", label);
+            log_info!("stop {}", label);
             AppState::with_loop_runtime(|rt| rt.stop_loop(handle));
         } else {
-            println!("start {} (every {}s)", label, interval_secs);
+            log_info!("start {} (every {}s)", label, interval_secs);
             if let Some(handle) = AppState::with_loop_runtime(|rt| {
                 rt.start_loop(hotkey.input_string.clone(), interval_secs, delay_ms)
             }) {
@@ -101,16 +102,18 @@ impl HotkeyManager {
 
     pub fn print_hotkey_configs() {
         let config = AppState::get_config();
-        println!("loaded {} profile(s):", config.profiles.len());
+        log_info!("loaded {} profile(s)", config.profiles.len());
         for (pi, profile) in config.profiles.iter().enumerate() {
-            println!();
-            println!(
+            log_info!(
                 "  [{}] {}  (keywords: {:?})",
-                pi, profile.name, profile.window_keywords
+                pi,
+                profile.name,
+                profile.window_keywords
             );
-            println!(
+            log_info!(
                 "      profile interval: {}s, key delay: {}ms",
-                profile.auto_input_interval_secs, profile.input_delay_millis
+                profile.auto_input_interval_secs,
+                profile.input_delay_millis
             );
             for (i, hk) in profile.hotkeys.iter().enumerate() {
                 let desc = hk.description.as_deref().unwrap_or("no description");
@@ -119,7 +122,7 @@ impl HotkeyManager {
                 } else {
                     "once".to_string()
                 };
-                println!(
+                log_info!(
                     "      {}. {} + {} -> {} ({}, {})",
                     i + 1,
                     hk.modifier_key,
@@ -130,6 +133,5 @@ impl HotkeyManager {
                 );
             }
         }
-        println!();
     }
 }

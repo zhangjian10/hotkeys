@@ -1,8 +1,13 @@
+// release build 走 windows 子系统：双击 exe 无控制台窗口；
+// debug build 仍带控制台，便于 cargo run。
+#![cfg_attr(all(not(debug_assertions), windows), windows_subsystem = "windows")]
+
 use rdev::listen;
 
 mod elevation;
 mod hotkey;
 mod input;
+mod logging;
 mod loop_runtime;
 mod state;
 mod window;
@@ -22,25 +27,22 @@ fn load_config(config_path: &str, is_watcher: bool) {
         Ok(new_config) => {
             AppState::set_config(new_config);
             if is_watcher {
-                println!("Configuration changed, reloading...");
+                log_info!("Configuration changed, reloading...");
                 return;
             }
             HotkeyManager::print_hotkey_configs();
         }
         Err(e) => {
-            eprintln!("Failed to reload configuration: {:?}", e);
+            log_error!("Failed to reload configuration: {:?}", e);
         }
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("========================================");
-    println!("    GameMacro Daemon v{}    ", env!("CARGO_PKG_VERSION"));
-    println!("========================================");
-    println!();
+    logging::init();
+    log_info!("GameMacro Daemon v{} starting", env!("CARGO_PKG_VERSION"));
 
     ensure_elevated();
-    println!();
 
     let config_path = "gamemacro.toml";
     load_config(config_path, false);
@@ -71,26 +73,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         load_config(&config_path_clone, true);
                     }
                 }
-                Err(e) => eprintln!("Watch error: {:?}", e),
+                Err(e) => log_error!("Watch error: {:?}", e),
             }
         }
     });
 
-    println!("==========================================");
-    println!("    Program is running...                  ");
-    println!("    Waiting for window activation          ");
-    println!("    Press Ctrl + C to exit                 ");
-    println!("==========================================");
-    println!();
+    log_info!("Listening for hotkeys; waiting for window activation");
 
     // Initialize window monitoring
     WindowManager::init_window_hook()?;
     WindowManager::refresh_state();
 
     // Start listening for global keyboard events
-    println!("Starting global hotkey listener...");
     if let Err(error) = listen(HotkeyManager::handle_key_event) {
-        eprintln!("Listening error: {:?}", error);
+        log_error!("Listening error: {:?}", error);
     }
 
     Ok(())

@@ -1,3 +1,4 @@
+use crate::log_error;
 use enigo::{
     Direction::{self, Click},
     Enigo, Key, Keyboard, Settings,
@@ -21,7 +22,7 @@ impl InputManager {
     fn input_key(&mut self, key: char, direction: Direction) {
         let result = self.enigo.key(Key::Unicode(key), direction);
         if let Err(e) = result {
-            eprintln!("Error sending key: {}", e);
+            log_error!("Error sending key: {}", e);
         }
     }
 }

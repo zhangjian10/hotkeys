@@ -1,3 +1,4 @@
+use crate::{log_error, log_info};
 use std::env;
 use std::process::{Command, exit};
 use winapi::{
@@ -47,7 +48,7 @@ pub fn request_elevation() -> ! {
     let current_exe = env::current_exe().expect("Failed to get current executable path");
     let args: Vec<String> = env::args().skip(1).collect();
 
-    println!("Requesting administrator privileges...");
+    log_info!("Requesting administrator privileges...");
 
     // 使用 runas 动词通过 ShellExecute 重新启动程序
     let mut cmd = Command::new("powershell");
@@ -63,12 +64,12 @@ pub fn request_elevation() -> ! {
 
     match cmd.spawn() {
         Ok(_) => {
-            println!("Restarting with administrator privileges...");
+            log_info!("Restarting with administrator privileges...");
             exit(0);
         }
         Err(e) => {
-            eprintln!("Failed to restart with administrator privileges: {}", e);
-            eprintln!("Please run this program as administrator manually.");
+            log_error!("Failed to restart with administrator privileges: {}", e);
+            log_error!("Please run this program as administrator manually.");
             exit(1);
         }
     }
@@ -77,10 +78,10 @@ pub fn request_elevation() -> ! {
 /// 确保程序以管理员权限运行，如果没有则自动请求
 pub fn ensure_elevated() {
     if !is_elevated() {
-        println!("This program requires administrator privileges to work properly.");
-        println!("Global hotkey monitoring requires elevated permissions.");
+        log_info!("This program requires administrator privileges to work properly.");
+        log_info!("Global hotkey monitoring requires elevated permissions.");
         request_elevation();
     } else {
-        println!("Running with administrator privileges ✓");
+        log_info!("Running with administrator privileges");
     }
 }

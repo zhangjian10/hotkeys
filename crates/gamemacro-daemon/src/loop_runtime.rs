@@ -8,6 +8,7 @@
 //! - 单次输入（repeat=false）：调用 `submit_once()` 直接发一条到 worker，不起 task
 
 use crate::input::InputManager;
+use crate::log_error;
 use std::sync::mpsc as std_mpsc;
 use std::thread;
 use std::time::Duration;
@@ -130,7 +131,7 @@ fn input_worker_loop(rx: std_mpsc::Receiver<InputJob>) {
     let mut input = match InputManager::new() {
         Ok(i) => i,
         Err(e) => {
-            eprintln!("input worker: failed to init Enigo: {}", e);
+            log_error!("input worker: failed to init Enigo: {}", e);
             return;
         }
     };

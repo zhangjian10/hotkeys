@@ -1,3 +1,4 @@
+use crate::log_info;
 use crate::loop_runtime::LoopRuntime;
 use gamemacro_core::{Config, Profile};
 use lazy_static::lazy_static;
@@ -41,9 +42,9 @@ impl AppState {
 
         if active != last_status {
             if active {
-                println!("window is active");
+                log_info!("window is active");
             } else {
-                println!("window is inactive");
+                log_info!("window is inactive");
             }
         }
     }
@@ -58,10 +59,10 @@ impl AppState {
             match index {
                 Some(i) => {
                     if let Some(p) = CONFIG.lock().unwrap().profiles.get(i) {
-                        println!("Profile activated: {} (#{})", p.name, i);
+                        log_info!("Profile activated: {} (#{})", p.name, i);
                     }
                 }
-                None => println!("No profile active"),
+                None => log_info!("No profile active"),
             }
         }
     }
