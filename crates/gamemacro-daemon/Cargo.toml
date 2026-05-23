@@ -20,6 +20,12 @@ winapi = { version = "0.3.9", features = [
     "securitybaseapi",
     "processthreadsapi",
     "winnt",
+    "namedpipeapi",
+    "fileapi",
+    "winbase",
+    "minwindef",
+    "winerror",
+    "errhandlingapi",
 ] }
 
 [build-dependencies]

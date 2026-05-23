@@ -7,6 +7,7 @@ use rdev::listen;
 mod elevation;
 mod hotkey;
 mod input;
+mod ipc;
 mod logging;
 mod loop_runtime;
 mod state;
@@ -49,6 +50,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 启动循环输入运行时（tokio runtime + 单 std input worker）
     AppState::init_loop_runtime()?;
+
+    // 启动 IPC 服务（命名管道：状态查询 / 远程停止）
+    ipc::spawn_server();
 
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = notify::recommended_watcher(tx)?;

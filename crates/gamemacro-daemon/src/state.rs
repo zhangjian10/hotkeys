@@ -11,6 +11,13 @@ use std::{
     },
 };
 
+/// 给 IPC 接口用的状态快照。
+pub struct StateSnapshot {
+    pub active: bool,
+    pub profile_name: Option<String>,
+    pub profile_index: Option<usize>,
+}
+
 lazy_static! {
     // 当前是否有任意 profile 命中（即"激活"）
     pub static ref WARCRAFT_ACTIVE: AtomicBool = AtomicBool::new(false);
@@ -108,6 +115,27 @@ impl AppState {
     pub fn set_config(config: Config) {
         let mut global_config = CONFIG.lock().unwrap();
         *global_config = config;
+    }
+
+    /// 给 IPC 用的轻量快照：当前是否激活、激活的 profile 名/索引。
+    pub fn snapshot() -> StateSnapshot {
+        let active = WARCRAFT_ACTIVE.load(Ordering::SeqCst);
+        let idx_raw = ACTIVE_PROFILE_INDEX.load(Ordering::SeqCst);
+        let (profile_name, profile_index) = if idx_raw < 0 {
+            (None, None)
+        } else {
+            let i = idx_raw as usize;
+            let name = CONFIG
+                .lock()
+                .ok()
+                .and_then(|c| c.profiles.get(i).map(|p| p.name.clone()));
+            (name, Some(i))
+        };
+        StateSnapshot {
+            active,
+            profile_name,
+            profile_index,
+        }
     }
 
     /// 在 daemon 启动时调用一次。重复调用会返回错误。
