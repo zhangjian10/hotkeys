@@ -320,13 +320,13 @@ crates/gamemacro-gui/src/
 
 ## 11. 实施阶段（4 个 PR）
 
-### 阶段 1：改名（机械性，低风险）
-按 §2 命名映射表一次性改完所有 22 个文件 + 目录重命名 + 配置文件迁移逻辑。  
-**验收**：`cargo build --release` 通过；旧 `hotkeys.toml` 自动迁移为 `gamemacro.toml`；行为零变化。
+### 阶段 1：改名（机械性，低风险）✓ 已完成
+按 §2 命名映射表一次性改完所有 22 个文件 + 目录重命名。一次性迁移代码已在阶段 2 之前移除（项目从 GameMacro 品牌起步发布，无遗留 `hotkeys.toml`）。  
+**验收**：`cargo build --release` 通过；行为零变化。
 
-### 阶段 2：Core 加字段
-按 §8 给 `HotkeyConfig` 加 `repeat` / `interval_secs_override`，daemon 端读这两个字段控制循环行为。  
-**验收**：旧 toml 仍可读；新字段不破坏 daemon。
+### 阶段 2：Per-hotkey 循环架构 ✓ 已完成
+`HotkeyConfig` 增加 `repeat`（默认 true）/ `interval_secs_override`（`Option<u64>`）字段，向后兼容旧 toml。daemon 引入 `LoopRuntime`：tokio multi-thread runtime + per-hotkey task + 一个 std thread 上的 Enigo input worker，所有 task 通过 std::mpsc 把待输入文本投递给 worker 串行化执行。每条热键独立循环、独立间隔；窗口失活 / 配置 reload 时通过 `CancellationToken` 整体清理。`auto_input.rs` 已删除。  
+**验收**：`cargo test -p gamemacro-core` 13/13 通过；`cargo build --release` 通过；手动烟雾测试见 `docs/plans/2026-05-23-gamemacro-loop-runtime.md` Task 8。
 
 ### 阶段 3：GUI 重构（核心工作量）
 按 §5～§10 重写前端，砍掉旧分栏与显式保存。  
