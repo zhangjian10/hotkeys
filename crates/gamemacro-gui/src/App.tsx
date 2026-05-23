@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Toaster, useId } from "@fluentui/react-components";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import {
   type HotkeyConfig,
@@ -82,16 +83,44 @@ export default function App() {
 
   /* ------------------------- 初始加载 ------------------------- */
   useEffect(() => {
+    let cancelled = false;
+    let shown = false;
+
+    const showWindow = () => {
+      if (shown || cancelled) return;
+      shown = true;
+      // 双 rAF：等 React commit + 浏览器至少 paint 一次再露出窗口
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          const win = getCurrentWindow();
+          void win.show();
+          void win.setFocus();
+        });
+      });
+    };
+
+    // 兜底：无论 loadConfig 多慢，最迟 1500ms 后也要把窗口 show 出来
+    const fallback = window.setTimeout(showWindow, 1500);
+
     void (async () => {
       try {
         const bundle = await loadConfig();
+        if (cancelled) return;
         cfg.load(bundle.config);
         setPath(bundle.path);
         setActiveProfile(bundle.config.profiles.length > 0 ? 0 : -1);
       } catch (e) {
-        flash("error", `加载失败：${formatErr(e)}`);
+        if (!cancelled) flash("error", `加载失败：${formatErr(e)}`);
+      } finally {
+        showWindow();
       }
     })();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(fallback);
+    };
     // 仅初始化一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
