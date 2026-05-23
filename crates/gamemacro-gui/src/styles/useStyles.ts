@@ -52,11 +52,7 @@ export const useStyles = makeStyles({
   },
   /**
    * Windows 11 原生 caption 按钮 —— 使用原生 <button>，没有 Fluent Button 的
-   * minHeight / padding / focus-ring 干扰：
-   * - 46px × 32px（系统默认 caption button 尺寸）
-   * - hover：rgba(0,0,0,0.0578)（WinUI Caption Button 资源字典）
-   * - active：rgba(0,0,0,0.0373)
-   * - 去焦点描边（鼠标点击场景），仅键盘聚焦保留可见 outline 以满足可访问性
+   * minHeight / padding / focus-ring 干扰。
    */
   captionBtn: {
     appearance: "none",
@@ -85,10 +81,6 @@ export const useStyles = makeStyles({
       outlineOffset: "-1px",
     },
   },
-  /**
-   * 关闭按钮的 hover/active 重写：Win11 用 #C42B1C / #B5271B 红 + 白图标。
-   * 注意非 hover 态下图标颜色仍跟随容器（深灰），与原生一致。
-   */
   captionBtnClose: {
     "&:hover": {
       backgroundColor: "#C42B1C",
@@ -99,230 +91,78 @@ export const useStyles = makeStyles({
       color: "#FFFFFF",
     },
   },
-  body: {
-    display: "grid",
-    gridTemplateColumns: "260px minmax(0, 1fr)",
-    flex: 1,
-    minHeight: 0,
-    overflow: "hidden",
-  },
 
-  /* ================= Sidebar ================= */
-  sidebar: {
-    display: "flex",
-    flexDirection: "column",
-    minHeight: 0,
-    paddingTop: "8px",
-    paddingInline: "8px",
-    backgroundColor: tokens.colorNeutralBackground3,
-  },
-  brand: {
-    paddingInline: "8px",
-    marginBottom: "16px",
-  },
-  navGroupLabel: {
-    paddingInline: "12px",
-    paddingBlock: "6px",
-    color: tokens.colorNeutralForeground3,
-    fontSize: "11.5px",
-    fontWeight: tokens.fontWeightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  profileItem: {
-    appearance: "none",
-    background: "transparent",
-    border: "none",
-    width: "100%",
-    minHeight: "36px",
-    paddingInline: "12px",
-    borderRadius: tokens.borderRadiusMedium,
-    display: "flex",
-    alignItems: "center",
-    columnGap: "8px",
-    color: tokens.colorNeutralForeground2,
-    cursor: "pointer",
-    textAlign: "left",
-    "&:hover": {
-      backgroundColor: tokens.colorSubtleBackgroundHover,
-      color: tokens.colorNeutralForeground1,
-    },
-  },
-  profileItemActive: {
-    backgroundColor: tokens.colorNeutralBackground1,
-    color: tokens.colorNeutralForeground1,
-    boxShadow: tokens.shadow2,
-  },
-  profileItemBox: {
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    columnGap: "8px",
-  },
-  profileItemMain: {
-    flex: 1,
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-  },
-  profileItemTitle: {
-    fontSize: "13px",
-    fontWeight: tokens.fontWeightMedium,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  profileItemMeta: {
-    fontSize: "11px",
-    color: tokens.colorNeutralForeground3,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  navTabList: {
-    rowGap: "2px",
-    paddingTop: "8px",
-  },
-  navTab: {
-    height: "36px",
-    borderRadius: tokens.borderRadiusMedium,
-    paddingInline: "12px",
-  },
-  sidebarFooter: {
-    marginTop: "auto",
-    padding: "8px",
-    display: "flex",
-    flexDirection: "column",
-    rowGap: "4px",
-  },
-  pathBtn: {
-    appearance: "none",
-    background: "transparent",
-    border: "none",
-    width: "100%",
-    paddingInline: "12px",
-    paddingBlock: "8px",
-    borderRadius: tokens.borderRadiusMedium,
-    textAlign: "left",
-    display: "flex",
-    alignItems: "center",
-    columnGap: "8px",
-    color: tokens.colorNeutralForeground2,
-    cursor: "pointer",
-    "&:hover": {
-      backgroundColor: tokens.colorSubtleBackgroundHover,
-    },
-  },
-  pathBtnText: {
-    minWidth: 0,
-    flex: 1,
-    fontFamily: tokens.fontFamilyMonospace,
-    fontSize: "11.5px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-
-  /* ================= 内容区 ================= */
-  content: {
-    display: "flex",
-    flexDirection: "column",
-    minWidth: 0,
-    minHeight: 0,
-    overflow: "hidden",
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderTopLeftRadius: "8px",
-    borderBottomLeftRadius: "8px",
-    boxShadow: tokens.shadow4,
-    margin: "8px 8px 8px 0",
-  },
-
-  dirtyBar: {
+  /* ================= 顶栏（TitleBar 下方一条） ================= */
+  topBar: {
+    flexShrink: 0,
+    height: "44px",
     display: "flex",
     alignItems: "center",
     columnGap: "12px",
-    paddingInline: "20px",
-    paddingBlock: "10px",
+    paddingInline: "16px",
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground1,
-    flexShrink: 0,
   },
-  dirtyText: { flex: 1, minWidth: 0 },
-  dirtyActions: { display: "flex", columnGap: "8px", flexShrink: 0 },
+  topBrand: {
+    fontSize: "13px",
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+    paddingRight: "8px",
+    borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
+    marginRight: "4px",
+  },
+  topBarSpacer: { flex: 1, minWidth: 0 },
 
-  profileHeader: {
-    display: "flex",
-    alignItems: "center",
-    columnGap: "12px",
-    paddingInline: "36px",
-    paddingTop: "20px",
-    flexShrink: 0,
-  },
-  profileHeaderIcon: {
-    width: "36px",
-    height: "36px",
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "8px",
-    backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground1,
-  },
-  profileHeaderText: {
+  /* ================= 主体（顶栏下方铺满） ================= */
+  body: {
     flex: 1,
-    minWidth: 0,
+    minHeight: 0,
     display: "flex",
     flexDirection: "column",
-  },
-  profileHeaderTitle: {
-    fontSize: "18px",
-    fontWeight: tokens.fontWeightSemibold,
     overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    backgroundColor: tokens.colorNeutralBackground1,
   },
-  profileHeaderMeta: {
-    fontSize: "12px",
-    color: tokens.colorNeutralForeground3,
-  },
-
   scroll: { flex: 1, minHeight: 0, overflowY: "auto" },
   scrollInner: {
     width: "100%",
     maxWidth: "1024px",
-    paddingInline: "36px",
-    paddingTop: "20px",
+    marginInline: "auto",
+    paddingInline: "24px",
+    paddingTop: "16px",
     paddingBottom: "48px",
     display: "flex",
     flexDirection: "column",
-    rowGap: "20px",
+    rowGap: "16px",
   },
 
-  pageHeader: {
+  /* ================= 设置 Dialog ================= */
+  settingsDialog: {
+    minWidth: "560px",
+    maxWidth: "640px",
+  },
+  settingsBody: {
+    paddingTop: "8px",
     display: "flex",
     flexDirection: "column",
-    rowGap: "4px",
-    marginBottom: "8px",
-  },
-  pageSubtitle: { color: tokens.colorNeutralForeground3 },
-
-  groupTitle: {
-    paddingInline: "4px",
-    marginBottom: "4px",
-    color: tokens.colorNeutralForeground1,
-  },
-  group: { display: "flex", flexDirection: "column", rowGap: "8px" },
-  groupCard: {
-    backgroundColor: tokens.colorNeutralBackground1,
+    rowGap: "0px",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: "7px",
     overflow: "hidden",
+    marginTop: "12px",
+  },
+  settingsGroupLabel: {
+    paddingInline: "16px",
+    paddingTop: "12px",
+    color: tokens.colorNeutralForeground3,
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  dialogForm: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: "12px",
   },
 
+  /* ================= 通用 SettingRow ================= */
   row: {
     display: "flex",
     alignItems: "center",
@@ -330,6 +170,7 @@ export const useStyles = makeStyles({
     minHeight: "56px",
     paddingInline: "16px",
     paddingBlock: "10px",
+    backgroundColor: tokens.colorNeutralBackground1,
   },
   rowDivider: {
     height: "1px",
@@ -370,20 +211,23 @@ export const useStyles = makeStyles({
     columnGap: "8px",
   },
 
+  /* ================= 关键词 Tag ================= */
   tagGroup: {
     display: "flex",
     flexWrap: "wrap",
     gap: "8px",
     paddingInline: "16px",
     paddingBlock: "12px",
+    backgroundColor: tokens.colorNeutralBackground1,
   },
   emptyTagHint: {
     paddingInline: "16px",
     paddingBlock: "16px",
     color: tokens.colorNeutralForeground3,
+    backgroundColor: tokens.colorNeutralBackground1,
   },
 
-  /* Hotkeys 列表行 */
+  /* ================= Hotkeys 列表（仍保留旧 Row，Sub-PR C 替换为 Card） ================= */
   hkRow: {
     display: "flex",
     alignItems: "center",
@@ -433,51 +277,29 @@ export const useStyles = makeStyles({
   },
   hkActions: { display: "flex", columnGap: "4px", flexShrink: 0 },
   hkSearch: {
-    paddingInline: "16px",
-    paddingTop: "12px",
+    paddingTop: "4px",
     paddingBottom: "8px",
     display: "flex",
     alignItems: "center",
     columnGap: "12px",
   },
-
-  causalCard: {
-    border: `1px solid ${tokens.colorBrandStroke2}`,
-    backgroundColor: tokens.colorBrandBackground2,
-    borderRadius: "8px",
-    padding: "12px 16px",
-    display: "flex",
-    alignItems: "center",
-    columnGap: "8px",
-    color: tokens.colorBrandForeground1,
-    fontSize: "13px",
-    lineHeight: 1.5,
-    flexWrap: "wrap",
-  },
-  causalKw: {
-    fontFamily: tokens.fontFamilyMonospace,
+  hkListCard: {
     backgroundColor: tokens.colorNeutralBackground1,
-    color: tokens.colorNeutralForeground1,
-    paddingInline: "6px",
-    paddingBlock: "1px",
-    borderRadius: "4px",
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-  },
-  causalWarn: {
-    border: `1px solid ${tokens.colorPaletteYellowBorder1}`,
-    backgroundColor: tokens.colorPaletteYellowBackground1,
-    color: tokens.colorPaletteYellowForeground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: "7px",
+    overflow: "hidden",
   },
 
+  /* ================= 当前活动窗口实时显示（设置 Dialog 内复用） ================= */
   liveWindow: {
     display: "flex",
     alignItems: "center",
     columnGap: "8px",
-    paddingInline: "12px",
+    paddingInline: "16px",
     paddingBlock: "10px",
-    borderRadius: "7px",
     backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderTop: `1px solid ${tokens.colorNeutralStroke3}`,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke3}`,
     fontSize: "12.5px",
   },
   liveDot: {
@@ -494,6 +316,7 @@ export const useStyles = makeStyles({
     whiteSpace: "nowrap",
   },
 
+  /* ================= "试一下" 倒计时 ================= */
   countdownBox: {
     display: "flex",
     flexDirection: "column",
@@ -508,6 +331,7 @@ export const useStyles = makeStyles({
     lineHeight: 1,
   },
 
+  /* ================= 空状态（无 profile / 无 hotkey 搜索） ================= */
   empty: {
     display: "flex",
     flexDirection: "column",
@@ -530,6 +354,7 @@ export const useStyles = makeStyles({
     textAlign: "center",
   },
 
+  /* ================= EditorDrawer（Sub-PR C 删） ================= */
   recordCard: {
     display: "flex",
     flexDirection: "column",
@@ -581,13 +406,13 @@ export const useStyles = makeStyles({
   },
   drawerTextarea: {
     fontFamily: tokens.fontFamilyMonospace,
-    /* 默认 6 行左右；用户可手动拖动 textarea 右下角调整 */
     "& textarea": {
       minHeight: "120px",
       maxHeight: "240px",
     },
   },
 
+  /* ================= KeyChip ================= */
   keyChip: {
     display: "inline-flex",
     alignItems: "center",
@@ -611,6 +436,7 @@ export const useStyles = makeStyles({
   },
   keyPlus: { color: tokens.colorNeutralForeground3, fontSize: "12px" },
 
+  /* ================= WindowPickerDialog ================= */
   windowList: {
     maxHeight: "360px",
     overflowY: "auto",

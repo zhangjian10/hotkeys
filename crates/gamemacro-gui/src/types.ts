@@ -4,7 +4,5 @@
 
 export type ToastKind = "info" | "error" | "success" | "warning";
 
-export type SectionId = "hotkeys" | "window" | "timing";
-
-/** Window-keyword input mode in WindowPage. */
+/** Window-keyword input mode in SettingsDialog. */
 export type DraftMode = "fuzzy" | "exact";

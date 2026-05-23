@@ -10,9 +10,7 @@ import {
   Search20Regular,
 } from "@fluentui/react-icons";
 import type { HotkeyConfig, Profile } from "../../lib/api";
-import { humanKeyword } from "../../lib/utils";
 import { useStyles } from "../../styles/useStyles";
-import { Group, PageHeader } from "../Layout";
 import { HotkeyRow } from "../HotkeyRow";
 
 export interface HotkeysPageProps {
@@ -26,15 +24,20 @@ export interface HotkeysPageProps {
   onEdit: (i: number) => void;
   onDelete: (i: number) => void;
   onTry: (text: string) => void;
+  /** 当 profile 没有窗口关键词时，引导用户去打开设置 Dialog 配。 */
   onGoWindow: () => void;
 }
 
+/**
+ * 单页主体：顶部搜索 + 「+ 新增」、下方一张卡片承载所有热键行。
+ * 当前仍使用旧 HotkeyRow，Sub-PR C 替换为可内联展开的 HotkeyCard。
+ */
 export function HotkeysPage({
   profile,
   hotkeys,
   total,
-  query,
   recording,
+  query,
   onChangeQuery,
   onAdd,
   onEdit,
@@ -47,44 +50,30 @@ export function HotkeysPage({
 
   return (
     <>
-      <PageHeader
-        title="热键"
-        subtitle="管理当前配置下的全局组合键以及它们触发时自动输入的内容。"
-      />
-
-      {/* 因果预览：让小白一眼看懂"在哪激活、按什么、做什么" */}
-      <div
-        className={`${styles.causalCard} ${
-          noKeyword ? styles.causalWarn : ""
-        }`}
-      >
-        {noKeyword ? (
-          <>
-            <span>
-              此配置还没有窗口关键词，热键<strong>不会</strong>
-              在任何窗口被激活。
-            </span>
-            <Button size="small" appearance="primary" onClick={onGoWindow}>
-              去添加
-            </Button>
-          </>
-        ) : (
-          <>
-            <span>当窗口标题包含</span>
-            {profile.window_keywords.slice(0, 3).map((kw, i) => (
-              <span key={`${kw}-${i}`} className={styles.causalKw}>
-                {humanKeyword(kw)}
-              </span>
-            ))}
-            {profile.window_keywords.length > 3 && (
-              <span className={styles.hkMuted}>
-                等 {profile.window_keywords.length} 项
-              </span>
-            )}
-            <span>时，按下下面任一组合键即触发。</span>
-          </>
-        )}
-      </div>
+      {noKeyword && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            columnGap: 8,
+            padding: "10px 14px",
+            border: "1px solid #f0c674",
+            backgroundColor: "#fff8e1",
+            borderRadius: 7,
+            color: "#7a5b00",
+            fontSize: 13,
+          }}
+        >
+          <span>
+            「{profile.name}」还没有窗口关键词，热键
+            <strong>不会</strong>在任何窗口生效。
+          </span>
+          <span style={{ flex: 1 }} />
+          <Button size="small" appearance="primary" onClick={onGoWindow}>
+            去设置
+          </Button>
+        </div>
+      )}
 
       <div className={styles.hkSearch}>
         <Input
@@ -104,7 +93,7 @@ export function HotkeysPage({
         </Button>
       </div>
 
-      <Group>
+      <div className={styles.hkListCard}>
         {hotkeys.length === 0 ? (
           <div className={styles.empty}>
             <KeyboardLayoutFloat20Regular style={{ fontSize: 28 }} />
@@ -132,7 +121,7 @@ export function HotkeysPage({
             </div>
           ))
         )}
-      </Group>
+      </div>
     </>
   );
 }

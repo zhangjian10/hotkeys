@@ -3,7 +3,6 @@ import { Toaster, useId } from "@fluentui/react-components";
 
 import {
   type HotkeyConfig,
-  type Profile,
   emptyHotkey,
   emptyProfile,
   loadConfig,
@@ -11,14 +10,13 @@ import {
   saveConfig,
 } from "./lib/api";
 import { comboText, formatErr } from "./lib/utils";
-import type { DraftMode, SectionId } from "./types";
+import type { DraftMode } from "./types";
 import { TOASTER_ID } from "./constants/app";
 import { useStyles } from "./styles/useStyles";
 
 /* hooks */
 import { useConfigState } from "./hooks/useConfigState";
 import { useFlash } from "./hooks/useFlash";
-import { useForegroundTitle } from "./hooks/useForegroundTitle";
 import { useTryInput } from "./hooks/useTryInput";
 import { useRecorder } from "./hooks/useRecorder";
 import {
@@ -29,13 +27,11 @@ import {
 } from "./hooks/useDerived";
 
 /* components */
-import { Sidebar } from "./components/Sidebar/Sidebar";
 import { TitleBar } from "./components/TitleBar";
-import { ProfileHeader } from "./components/ProfileHeader";
+import { TopBar } from "./components/TopBar";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { NoProfilesEmpty } from "./components/NoProfilesEmpty";
 import { HotkeysPage } from "./components/pages/HotkeysPage";
-import { WindowPage } from "./components/pages/WindowPage";
-import { TimingPage } from "./components/pages/TimingPage";
 import { EditorDrawer } from "./components/EditorDrawer";
 import { WindowPickerDialog } from "./components/WindowPickerDialog";
 import { ConfirmDialog } from "./components/ConfirmDialog";
@@ -49,6 +45,8 @@ interface ConfirmTask {
 /** autosave 防抖延迟。daemon 也以 500ms 防抖，整体最多 1s 内反映变更。 */
 const SAVE_DEBOUNCE_MS = 500;
 
+const APP_VERSION = "0.1.0";
+
 export default function App() {
   const styles = useStyles();
   const toasterId = useId(TOASTER_ID);
@@ -60,12 +58,10 @@ export default function App() {
 
   const [path, setPath] = useState("");
   const [activeProfile, setActiveProfile] = useState(-1);
-  const [section, setSection] = useState<SectionId>("hotkeys");
   const [editingHotkey, setEditingHotkey] = useState(-1);
   const [hotkeyQuery, setHotkeyQuery] = useState("");
-  const [keywordDraft, setKeywordDraft] = useState("");
-  const [draftMode, setDraftMode] = useState<DraftMode>("fuzzy");
   const [windowPickerOpen, setWindowPickerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmTask | null>(null);
 
   const profile = useActiveProfile(config, activeProfile);
@@ -73,14 +69,10 @@ export default function App() {
   const duplicateCombo = useDuplicateCombo(profile, editing, editingHotkey);
   const visibleHotkeys = useVisibleHotkeys(profile, hotkeyQuery);
 
-  const foreground = useForegroundTitle(section === "window");
-
   /* ------------------------- 录制 ------------------------- */
-  // 用 ref 风格捕获回调，避免每次 editing 变都重建 useRecorder
   const recorder = useRecorder({
     flash,
     onCaptured: (combo) => {
-      // 录制完成时把组合键写入 *当前* editing 位置
       cfg.patchHotkey(activeProfile, editingHotkey, {
         modifier_key: combo.modifier,
         trigger_key: combo.trigger,
@@ -106,9 +98,6 @@ export default function App() {
   }, []);
 
   /* ------------------------- Autosave ------------------------- */
-  // config 每次变化都重置 timer；timer 触发后异步写盘并更新 lastSavedAt。
-  // 初次 load 之前 lastSavedAt === null，跳过；load 完成后 useConfigState
-  // 把 lastSavedAt 置为当时时间，因此首屏不会触发一次空保存。
   const saveTimerRef = useRef<number | null>(null);
   useEffect(() => {
     if (lastSavedAt === null) return; // 还没加载完，不要写盘
@@ -133,7 +122,6 @@ export default function App() {
         saveTimerRef.current = null;
       }
     };
-    // 仅在 config 变化时排队保存；cfg / flash 是稳定回调，无需进依赖。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config]);
 
@@ -146,64 +134,87 @@ export default function App() {
     setEditingHotkey(-1);
   }, []);
 
-  const addProfile = useCallback(() => {
+  const createProfile = useCallback(
+    (name: string, keyword: string) => {
+      if (recording) {
+        flash("info", "录制中，请先结束录制");
+        return;
+      }
+      const cleanName = name.trim() || `配置 ${config.profiles.length + 1}`;
+      const cleanKeyword = keyword.trim();
+      const newIndex = config.profiles.length;
+      const draft = emptyProfile(cleanName);
+      if (cleanKeyword) {
+        const final = cleanKeyword.includes("%")
+          ? cleanKeyword
+          : `%${cleanKeyword}%`;
+        draft.window_keywords = [final];
+      }
+      cfg.patch((c) => ({ ...c, profiles: [...c.profiles, draft] }));
+      setActiveProfile(newIndex);
+    },
+    [recording, config.profiles.length, cfg, flash],
+  );
+
+  const renameCurrentProfile = useCallback(
+    (name: string) => {
+      if (activeProfile < 0) return;
+      cfg.patchProfile(activeProfile, { name });
+    },
+    [activeProfile, cfg],
+  );
+
+  const duplicateCurrentProfile = useCallback(() => {
     if (recording) {
       flash("info", "录制中，请先结束录制");
       return;
     }
-    const name = `配置 ${config.profiles.length + 1}`;
+    if (!profile) return;
     const newIndex = config.profiles.length;
-    cfg.patch((c) => ({ ...c, profiles: [...c.profiles, emptyProfile(name)] }));
+    const copy = {
+      ...profile,
+      name: `${profile.name} 副本`,
+      hotkeys: profile.hotkeys.map((h) => ({ ...h })),
+      window_keywords: [...profile.window_keywords],
+    };
+    cfg.patch((c) => ({ ...c, profiles: [...c.profiles, copy] }));
     setActiveProfile(newIndex);
-    setSection("window");
-  }, [recording, config.profiles.length, cfg, flash]);
+  }, [recording, profile, config.profiles.length, cfg, flash]);
 
-  const renameProfile = useCallback(
-    (idx: number, name: string) =>
-      cfg.patch((c) => ({
-        ...c,
-        profiles: c.profiles.map((p, i) => (i === idx ? { ...p, name } : p)),
-      })),
-    [cfg],
-  );
-
-  const requestRemoveProfile = useCallback(
-    (idx: number) => {
-      if (recording) {
-        flash("info", "录制中暂不能删除配置");
-        return;
-      }
-      if (config.profiles.length <= 1) {
-        flash("info", "至少保留 1 个配置");
-        return;
-      }
-      const target = config.profiles[idx];
-      if (!target) return;
-      setConfirm({
-        label: `要删除配置「${target.name}」吗？该配置下的 ${target.hotkeys.length} 条热键会一起被移除。此操作不可撤销。`,
-        apply: () => {
-          cfg.patch((c) => ({
-            ...c,
-            profiles: c.profiles.filter((_, i) => i !== idx),
-          }));
-          setActiveProfile((cur) => {
-            if (cur === idx) return Math.max(0, idx - 1);
-            if (cur > idx) return cur - 1;
-            return cur;
-          });
-        },
-      });
-    },
-    [recording, config.profiles, cfg, flash],
-  );
+  const deleteCurrentProfile = useCallback(() => {
+    if (recording) {
+      flash("info", "录制中暂不能删除配置");
+      return;
+    }
+    if (config.profiles.length <= 1) {
+      flash("info", "至少保留 1 个配置");
+      return;
+    }
+    if (!profile) return;
+    const idx = activeProfile;
+    setConfirm({
+      label: `要删除配置「${profile.name}」吗？该配置下的 ${profile.hotkeys.length} 条热键会一起被移除。此操作不可撤销。`,
+      apply: () => {
+        cfg.patch((c) => ({
+          ...c,
+          profiles: c.profiles.filter((_, i) => i !== idx),
+        }));
+        setActiveProfile((cur) => {
+          if (cur === idx) return Math.max(0, idx - 1);
+          if (cur > idx) return cur - 1;
+          return cur;
+        });
+      },
+    });
+  }, [recording, profile, activeProfile, config.profiles.length, cfg, flash]);
 
   /* ------------------------- 关键词 ------------------------- */
   const addKeyword = useCallback(
     (value?: string, mode?: DraftMode) => {
       if (!profile) return;
-      const v = (value ?? keywordDraft).trim();
+      const v = (value ?? "").trim();
       if (!v) return;
-      const m = mode ?? draftMode;
+      const m: DraftMode = mode ?? "fuzzy";
       const final = m === "fuzzy" && !v.includes("%") ? `%${v}%` : v;
       if (profile.window_keywords.includes(final)) {
         flash("info", "该关键词已存在");
@@ -212,9 +223,8 @@ export default function App() {
       cfg.patchProfile(activeProfile, {
         window_keywords: [...profile.window_keywords, final],
       });
-      setKeywordDraft("");
     },
-    [profile, keywordDraft, draftMode, cfg, activeProfile, flash],
+    [profile, cfg, activeProfile, flash],
   );
 
   const removeKeyword = useCallback(
@@ -242,7 +252,6 @@ export default function App() {
     cfg.patchProfile(activeProfile, {
       hotkeys: [...profile.hotkeys, emptyHotkey()],
     });
-    setSection("hotkeys");
     setEditingHotkey(newIndex);
   }, [recording, profile, cfg, activeProfile, flash]);
 
@@ -295,52 +304,41 @@ export default function App() {
   return (
     <div className={styles.root}>
       <TitleBar title="GameMacro" />
-      <div className={styles.body}>
-        <Sidebar
-          profiles={config.profiles}
-          activeProfile={activeProfile}
-          section={section}
-          path={path}
-          onSelectProfile={selectProfile}
-          onAddProfile={addProfile}
-          onRenameProfile={renameProfile}
-          onRemoveProfile={requestRemoveProfile}
-          onSelectSection={setSection}
-          onReveal={reveal}
-        />
+      <TopBar
+        profiles={config.profiles}
+        activeProfile={activeProfile}
+        onSelectProfile={selectProfile}
+        onCreateProfile={createProfile}
+        onRenameCurrent={renameCurrentProfile}
+        onDuplicateCurrent={duplicateCurrentProfile}
+        onDeleteCurrent={deleteCurrentProfile}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
-        <div className={styles.content}>
-          {profile ? (
-            <Content
-              profile={profile}
-              section={section}
-              recording={recording}
-              hotkeyQuery={hotkeyQuery}
-              visibleHotkeys={visibleHotkeys}
-              foreground={foreground}
-              keywordDraft={keywordDraft}
-              draftMode={draftMode}
-              onChangeQuery={setHotkeyQuery}
-              onAddHotkey={addHotkey}
-              onEditHotkey={setEditingHotkey}
-              onDeleteHotkey={deleteHotkey}
-              onTryHotkey={tryInput.start}
-              onGoWindow={() => setSection("window")}
-              onChangeKeywordDraft={setKeywordDraft}
-              onChangeDraftMode={setDraftMode}
-              onAddKeyword={addKeyword}
-              onAddForegroundKeyword={() => {
-                if (foreground) addKeyword(foreground, "fuzzy");
-              }}
-              onRemoveKeyword={removeKeyword}
-              onPickWindow={() => setWindowPickerOpen(true)}
-              onChangeInterval={onChangeInterval}
-              onChangeDelay={onChangeDelay}
-            />
-          ) : (
-            <NoProfilesEmpty onCreate={addProfile} />
-          )}
-        </div>
+      <div className={styles.body}>
+        {profile ? (
+          <div className={styles.scroll}>
+            <div className={styles.scrollInner}>
+              <HotkeysPage
+                profile={profile}
+                hotkeys={visibleHotkeys}
+                total={profile.hotkeys.length}
+                query={hotkeyQuery}
+                recording={recording}
+                onChangeQuery={setHotkeyQuery}
+                onAdd={addHotkey}
+                onEdit={setEditingHotkey}
+                onDelete={deleteHotkey}
+                onTry={tryInput.start}
+                onGoWindow={() => setSettingsOpen(true)}
+              />
+            </div>
+          </div>
+        ) : (
+          <NoProfilesEmpty
+            onCreate={() => createProfile(`配置 1`, "")}
+          />
+        )}
       </div>
 
       <EditorDrawer
@@ -352,6 +350,20 @@ export default function App() {
         onChange={patchEditing}
         onToggleRecord={recorder.toggle}
         onTry={() => editing && tryInput.start(editing.input_string)}
+      />
+
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        profile={profile}
+        configPath={path}
+        appVersion={APP_VERSION}
+        onChangeInterval={onChangeInterval}
+        onChangeDelay={onChangeDelay}
+        onAddKeyword={(value, mode) => addKeyword(value, mode)}
+        onRemoveKeyword={removeKeyword}
+        onPickWindow={() => setWindowPickerOpen(true)}
+        onRevealConfig={reveal}
       />
 
       <WindowPickerDialog
@@ -381,106 +393,5 @@ export default function App() {
 
       <Toaster toasterId={toasterId} position="bottom-end" pauseOnHover />
     </div>
-  );
-}
-
-/* ============================================================================
- * Content：根据 section 渲染对应页
- * ========================================================================== */
-
-interface ContentProps {
-  profile: Profile;
-  section: SectionId;
-  recording: boolean;
-  hotkeyQuery: string;
-  visibleHotkeys: { hotkey: HotkeyConfig; index: number }[];
-  foreground: string;
-  keywordDraft: string;
-  draftMode: DraftMode;
-  onChangeQuery: (v: string) => void;
-  onAddHotkey: () => void;
-  onEditHotkey: (i: number) => void;
-  onDeleteHotkey: (i: number) => void;
-  onTryHotkey: (text: string) => void;
-  onGoWindow: () => void;
-  onChangeKeywordDraft: (v: string) => void;
-  onChangeDraftMode: (m: DraftMode) => void;
-  onAddKeyword: (value?: string, mode?: DraftMode) => void;
-  onAddForegroundKeyword: () => void;
-  onRemoveKeyword: (i: number) => void;
-  onPickWindow: () => void;
-  onChangeInterval: (v: number) => void;
-  onChangeDelay: (v: number) => void;
-}
-
-function Content({
-  profile,
-  section,
-  recording,
-  hotkeyQuery,
-  visibleHotkeys,
-  foreground,
-  keywordDraft,
-  draftMode,
-  onChangeQuery,
-  onAddHotkey,
-  onEditHotkey,
-  onDeleteHotkey,
-  onTryHotkey,
-  onGoWindow,
-  onChangeKeywordDraft,
-  onChangeDraftMode,
-  onAddKeyword,
-  onAddForegroundKeyword,
-  onRemoveKeyword,
-  onPickWindow,
-  onChangeInterval,
-  onChangeDelay,
-}: ContentProps) {
-  const styles = useStyles();
-  return (
-    <>
-      <ProfileHeader profile={profile} />
-      <div className={styles.scroll}>
-        <div className={styles.scrollInner}>
-          {section === "hotkeys" && (
-            <HotkeysPage
-              profile={profile}
-              hotkeys={visibleHotkeys}
-              total={profile.hotkeys.length}
-              query={hotkeyQuery}
-              recording={recording}
-              onChangeQuery={onChangeQuery}
-              onAdd={onAddHotkey}
-              onEdit={onEditHotkey}
-              onDelete={onDeleteHotkey}
-              onTry={onTryHotkey}
-              onGoWindow={onGoWindow}
-            />
-          )}
-          {section === "window" && (
-            <WindowPage
-              profile={profile}
-              draft={keywordDraft}
-              draftMode={draftMode}
-              foreground={foreground}
-              onChangeDraft={onChangeKeywordDraft}
-              onChangeMode={onChangeDraftMode}
-              onAdd={onAddKeyword}
-              onAddForeground={onAddForegroundKeyword}
-              onRemove={onRemoveKeyword}
-              onPickWindow={onPickWindow}
-            />
-          )}
-          {section === "timing" && (
-            <TimingPage
-              profile={profile}
-              onChangeInterval={onChangeInterval}
-              onChangeDelay={onChangeDelay}
-            />
-          )}
-        </div>
-      </div>
-    </>
   );
 }
