@@ -1,3 +1,4 @@
+use crate::hotkey::HotkeyManager;
 use crate::state::AppState;
 use std::{ffi::OsString, os::windows::ffi::OsStringExt};
 use winapi::{
@@ -41,13 +42,22 @@ impl WindowManager {
         }
     }
 
-    /// 刷新激活状态：根据当前前台窗口标题在所有 profile 中找匹配
+    /// 刷新激活状态：根据当前前台窗口标题在所有 profile 中找匹配。
+    /// 失活时（任何 profile 都不命中）顺手取消所有进行中的循环——
+    /// 用户切到别的窗口不应继续被自动输入打扰。
     pub fn refresh_state() {
+        let was_active = AppState::is_active();
         let title = Self::current_title_lower();
         let cfg = AppState::get_config();
         let active_idx = title.as_deref().and_then(|t| cfg.active_profile_index(t));
-        AppState::set_active(active_idx.is_some());
+        let now_active = active_idx.is_some();
+
+        AppState::set_active(now_active);
         AppState::set_active_profile(active_idx);
+
+        if was_active && !now_active {
+            HotkeyManager::cancel_all();
+        }
     }
 }
 

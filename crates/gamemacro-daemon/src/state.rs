@@ -1,10 +1,11 @@
+use crate::loop_runtime::LoopRuntime;
 use gamemacro_core::{Config, Profile};
 use lazy_static::lazy_static;
 use rdev::Key as RdevKey;
 use std::{
     collections::HashMap,
     sync::{
-        Mutex,
+        Mutex, OnceLock,
         atomic::{AtomicBool, AtomicI64, Ordering},
     },
 };
@@ -16,15 +17,16 @@ lazy_static! {
     // 当前激活的 profile 在 Config.profiles 中的索引；-1 表示没有命中
     pub static ref ACTIVE_PROFILE_INDEX: AtomicI64 = AtomicI64::new(-1);
 
-    // 自动输入字符串列表
-    pub static ref AUTO_INPUT: Mutex<Vec<String>> = Mutex::new(vec![]);
-
     // 修饰键状态
     pub static ref MODIFIER_KEYS_PRESSED: Mutex<HashMap<RdevKey, bool>> = Mutex::new(HashMap::new());
 
     // 全局配置
     pub static ref CONFIG: Mutex<Config> = Mutex::new(Config::default());
 }
+
+/// 全局唯一的 LoopRuntime。daemon 启动时通过 `init_loop_runtime` 注入；
+/// 此后通过 `with_loop_runtime` 在锁的保护下访问。
+static LOOP_RUNTIME: OnceLock<Mutex<LoopRuntime>> = OnceLock::new();
 
 pub struct AppState;
 
@@ -107,29 +109,17 @@ impl AppState {
         *global_config = config;
     }
 
-    pub fn add_auto_input(input_str: String) {
-        let mut auto_input = AUTO_INPUT.lock().unwrap();
-        if !auto_input.contains(&input_str) {
-            auto_input.push(input_str);
-        }
+    /// 在 daemon 启动时调用一次。重复调用会返回错误。
+    pub fn init_loop_runtime() -> std::io::Result<()> {
+        let rt = LoopRuntime::new()?;
+        LOOP_RUNTIME
+            .set(Mutex::new(rt))
+            .map_err(|_| std::io::Error::other("LoopRuntime already initialized"))?;
+        Ok(())
     }
 
-    pub fn remove_auto_input(input_str: &str) {
-        let mut auto_input = AUTO_INPUT.lock().unwrap();
-        auto_input.retain(|s| s != input_str);
-    }
-
-    pub fn clear_auto_input() {
-        let mut auto_input = AUTO_INPUT.lock().unwrap();
-        auto_input.clear();
-    }
-
-    pub fn contains_auto_input(input_str: &str) -> bool {
-        let auto_input = AUTO_INPUT.lock().unwrap();
-        auto_input.contains(&input_str.to_string())
-    }
-
-    pub fn get_auto_input_list() -> Vec<String> {
-        AUTO_INPUT.lock().unwrap().clone()
+    /// 在锁的保护下访问 LoopRuntime。若尚未初始化则返回 None（理论上不会发生）。
+    pub fn with_loop_runtime<R>(f: impl FnOnce(&mut LoopRuntime) -> R) -> Option<R> {
+        LOOP_RUNTIME.get().map(|m| f(&mut m.lock().unwrap()))
     }
 }

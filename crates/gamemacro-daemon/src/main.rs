@@ -1,6 +1,5 @@
 use rdev::listen;
 
-mod auto_input;
 mod elevation;
 mod hotkey;
 mod input;
@@ -8,7 +7,6 @@ mod loop_runtime;
 mod state;
 mod window;
 
-use auto_input::AutoInputManager;
 use elevation::ensure_elevated;
 use gamemacro_core::Config;
 use hotkey::HotkeyManager;
@@ -47,6 +45,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_path = "gamemacro.toml";
     load_config(config_path, false);
 
+    // 启动循环输入运行时（tokio runtime + 单 std input worker）
+    AppState::init_loop_runtime()?;
+
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = notify::recommended_watcher(tx)?;
     watcher.watch(Path::new(config_path), RecursiveMode::NonRecursive)?;
@@ -65,6 +66,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             continue;
                         }
                         *last = Instant::now();
+                        // 旧配置下进行中的循环按旧 interval 继续是错的：先取消再 reload
+                        HotkeyManager::cancel_all();
                         load_config(&config_path_clone, true);
                     }
                 }
@@ -82,9 +85,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize window monitoring
     WindowManager::init_window_hook()?;
-
-    // Start auto input
-    AutoInputManager::start();
     WindowManager::refresh_state();
 
     // Start listening for global keyboard events
