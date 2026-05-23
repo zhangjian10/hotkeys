@@ -8,7 +8,7 @@ import { useStyles } from "../styles/useStyles";
 export type ComboBadgeState = "static" | "recording" | "conflict";
 
 export interface ComboBadgeProps {
-  /** 修饰键集合（已排序去重）。可为空数组 = 无修饰键。 */
+  /** 修饰键序列（顺序敏感）。可为空数组 = 无修饰键。 */
   modifiers: string[];
   triggerKey: string;
   state: ComboBadgeState;
@@ -16,19 +16,20 @@ export interface ComboBadgeProps {
   pendingModifiers?: string[];
   /** conflict 态时显示的 tooltip 文案 */
   conflictHint?: string;
-  /** 点击徽章；调用方决定接下来是开始/停止录制 */
+  /**
+   * `interactive=true`（默认）：可点击；static 态默认不显示图标，hover 时
+   * 浮现编辑图标（不引起 layout shift——图标默认 visibility:hidden 占位）。
+   * `interactive=false`：纯展示，无图标 / 无 hover / 无 tooltip / 不响应点击；
+   * 用于展开态把 ComboBadge 当作"快捷键值显示"使用。
+   */
+  interactive?: boolean;
+  /** 点击徽章；仅 interactive=true 时生效 */
   onClick?: () => void;
   size?: "small" | "medium" | "large";
 }
 
 /**
- * 组合键徽章：单一控件承担「显示 / 录制入口 / 冲突警示」三种角色。
- *
- * 视觉提示（v2）：
- * - 始终显示一个铅笔/录制小图标 + 文字徽章，明示这是可点击控件
- * - hover 时整体微微浮起（CSS）
- * - 录制态：图标变成红点，文字实时显示已按下的修饰键 +「按下任意键完成」
- * - 支持任意多修饰键；空 modifiers 则只展示 trigger
+ * 快捷键徽章：折叠态承担「显示 / 编辑入口 / 冲突警示」；展开态可降级为纯显示。
  */
 function ComboBadgeBase({
   modifiers,
@@ -36,6 +37,7 @@ function ComboBadgeBase({
   state,
   pendingModifiers = [],
   conflictHint,
+  interactive = true,
   onClick,
   size = "medium",
 }: ComboBadgeProps) {
@@ -44,7 +46,7 @@ function ComboBadgeBase({
   const recordingContent =
     pendingModifiers.length > 0
       ? `${pendingModifiers.join(" + ")} + …`
-      : "按下组合键 · Esc 取消";
+      : "按下快捷键 · Esc 取消";
 
   const staticContent =
     modifiers.length === 0
@@ -59,19 +61,33 @@ function ComboBadgeBase({
   const appearance = state === "recording" ? "outline" : "tint";
   const color = state === "conflict" ? "severe" : "brand";
 
-  const icon =
-    state === "recording" ? <Record16Regular /> : <Edit16Regular />;
+  // 图标策略：
+  //   - interactive=false：完全没有图标
+  //   - recording / conflict：始终显示对应图标（明确语义）
+  //   - static + interactive：渲染编辑图标但默认 visibility:hidden 占位，
+  //     hover 时由 CSS 切到 visible，避免 layout shift
+  let icon: JSX.Element | undefined;
+  if (interactive) {
+    if (state === "recording") icon = <Record16Regular />;
+    else if (state === "conflict") icon = <Edit16Regular />;
+    else
+      icon = (
+        <Edit16Regular data-combo-hover-icon style={{ visibility: "hidden" }} />
+      );
+  }
 
   const className = mergeClasses(
     styles.comboBadge,
+    !interactive && styles.comboBadgeStatic,
     state === "recording" && styles.comboBadgeRecording,
     state === "conflict" && styles.comboBadgeConflict,
   );
 
-  const ariaLabel =
-    state === "recording"
-      ? "正在录制组合键，按 Esc 取消"
-      : `组合键 ${staticContent}，点击重新录制`;
+  const ariaLabel = interactive
+    ? state === "recording"
+      ? "正在录制快捷键，按 Esc 取消"
+      : `快捷键 ${staticContent}，点击修改`
+    : `快捷键 ${staticContent}`;
 
   const badge = (
     <Badge
@@ -82,31 +98,39 @@ function ComboBadgeBase({
       icon={icon}
       iconPosition="before"
       className={className}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
-      role="button"
-      tabIndex={0}
+      onClick={
+        interactive
+          ? (e) => {
+              e.stopPropagation();
+              onClick?.();
+            }
+          : undefined
+      }
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : -1}
       aria-label={ariaLabel}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          e.stopPropagation();
-          onClick?.();
-        }
-      }}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
     >
       {content}
     </Badge>
   );
 
-  // 静态态也加 tooltip 帮助新用户发现"它可以点"
+  // tooltip 只在 interactive 时附加
   const tooltip =
-    state === "conflict" && conflictHint
+    interactive && state === "conflict" && conflictHint
       ? conflictHint
-      : state === "static"
-        ? "点击重新录制组合键"
+      : interactive && state === "static"
+        ? "点击修改快捷键"
         : null;
 
   if (tooltip) {

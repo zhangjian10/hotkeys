@@ -24,7 +24,7 @@ export interface RecorderDialogProps {
 }
 
 /**
- * 组合键录制专用 Dialog。
+ * 快捷键录制专用 Dialog。
  *
  * 设计动机：原本 ComboBadge 内联点击进入录制态，对没看过文档的用户太隐晦——
  * 弹窗形式让"现在正在录制"这件事一目了然，并以大字号实时反馈用户按键序列。
@@ -61,7 +61,7 @@ export function RecorderDialog({
     >
       <DialogSurface>
         <DialogBody>
-          <DialogTitle>录制组合键</DialogTitle>
+          <DialogTitle>录制快捷键</DialogTitle>
           <DialogContent>
             <div className={styles.recorderBox}>
               <div className={styles.recorderDot}>

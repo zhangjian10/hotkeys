@@ -19,10 +19,10 @@ import {
 import {
   Copy20Regular,
   Delete20Regular,
+  Edit20Regular,
   KeyboardLayoutFloat20Regular,
   MoreHorizontal20Regular,
   Play20Regular,
-  Record20Regular,
 } from "@fluentui/react-icons";
 
 import {
@@ -94,7 +94,7 @@ function HotkeyCardBase({
       : "static";
 
   const conflictHint = duplicate
-    ? "此组合键与同 Profile 中另一条热键重复"
+    ? "此快捷键与同 Profile 中另一条重复"
     : isReserved
       ? `${reservedKey} 通常用于系统快捷键，可能与其它应用冲突`
       : undefined;
@@ -205,24 +205,24 @@ function HotkeyCardBase({
           {/* 显眼的录制按钮 —— 与左上角徽章组成"双入口"，新用户一定能找到 */}
           <div className={styles.hkCardRecordRow}>
             <KeyboardLayoutFloat20Regular className={styles.hkMuted} />
-            <span className={styles.hkCardRecordLabel}>组合键：</span>
+            <span className={styles.hkCardRecordLabel}>快捷键：</span>
             <ComboBadge
               modifiers={modifiers}
               triggerKey={hotkey.trigger_key}
               state={badgeState}
               pendingModifiers={pendingModifiers}
               conflictHint={conflictHint}
-              onClick={onToggleRecord}
+              interactive={false}
               size="medium"
             />
             <span style={{ flex: 1 }} />
             <Button
               appearance={recording ? "primary" : "secondary"}
               size="small"
-              icon={<Record20Regular />}
+              icon={<Edit20Regular />}
               onClick={onToggleRecord}
             >
-              {recording ? "停止录制" : "重新录制"}
+              {recording ? "停止录制" : "修改"}
             </Button>
           </div>
           {recording && (

@@ -397,6 +397,21 @@ export const useStyles = makeStyles({
       outline: `2px solid ${tokens.colorStrokeFocus2}`,
       outlineOffset: "1px",
     },
+    // hover / focus 时让"hover-only"图标浮现（默认 visibility:hidden 占位，
+    // 避免 layout shift）
+    "&:hover [data-combo-hover-icon]": {
+      visibility: "visible",
+    },
+    "&:focus-visible [data-combo-hover-icon]": {
+      visibility: "visible",
+    },
+  },
+  /** 静态展示（不可点击）的 ComboBadge：去掉 cursor pointer + focus ring */
+  comboBadgeStatic: {
+    cursor: "default",
+    "&:focus-visible": {
+      outline: "none",
+    },
   },
   comboBadgeRecording: {
     animationName: {

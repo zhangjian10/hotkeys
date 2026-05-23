@@ -92,7 +92,7 @@ export function HotkeysPage({
         <Input
           style={{ flex: 1 }}
           contentBefore={<Search20Regular />}
-          placeholder="搜索组合键、描述或输入内容…"
+          placeholder="搜索快捷键、描述或输入内容…"
           value={query}
           onChange={(_, d) => onChangeQuery(d.value)}
         />
