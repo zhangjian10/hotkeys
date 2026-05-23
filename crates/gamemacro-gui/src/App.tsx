@@ -74,12 +74,12 @@ export default function App() {
     flash,
     onCaptured: (combo) => {
       cfg.patchHotkey(activeProfile, expandedHotkey, {
-        modifier_key: combo.modifier,
+        modifiers: combo.modifiers,
         trigger_key: combo.trigger,
       });
     },
   });
-  const { recording } = recorder;
+  const { recording, pendingModifiers } = recorder;
 
   /* ------------------------- 初始加载 ------------------------- */
   useEffect(() => {
@@ -415,6 +415,7 @@ export default function App() {
                 total={profile.hotkeys.length}
                 query={hotkeyQuery}
                 recording={recording}
+                pendingModifiers={pendingModifiers}
                 expandedIndex={expandedHotkey}
                 onChangeQuery={setHotkeyQuery}
                 onAdd={addHotkey}

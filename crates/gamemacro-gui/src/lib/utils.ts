@@ -2,7 +2,10 @@ import type { HotkeyConfig, Profile } from "./api";
 import type { ToastKind } from "../types";
 
 export function comboText(hotkey: HotkeyConfig): string {
-  return `${hotkey.modifier_key}+${hotkey.trigger_key}`;
+  if (!hotkey.modifiers || hotkey.modifiers.length === 0) {
+    return hotkey.trigger_key;
+  }
+  return `${hotkey.modifiers.join("+")}+${hotkey.trigger_key}`;
 }
 
 /** 把 "%abc%" 这种模糊匹配关键词显示得更可读 */

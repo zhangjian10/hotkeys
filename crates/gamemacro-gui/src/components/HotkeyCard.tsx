@@ -19,8 +19,10 @@ import {
 import {
   Copy20Regular,
   Delete20Regular,
+  KeyboardLayoutFloat20Regular,
   MoreHorizontal20Regular,
   Play20Regular,
+  Record20Regular,
 } from "@fluentui/react-icons";
 
 import {
@@ -37,6 +39,8 @@ export interface HotkeyCardProps {
   index: number;
   expanded: boolean;
   recording: boolean;
+  /** 录制态下，已按下的修饰键（实时反馈给 ComboBadge） */
+  pendingModifiers?: string[];
   /** 是否与同 profile 内其它热键的组合键重复 */
   duplicate: boolean;
   /** 用于"高级"里的 fallback 显示：profile 默认间隔 */
@@ -60,6 +64,7 @@ function HotkeyCardBase({
   index,
   expanded,
   recording,
+  pendingModifiers,
   duplicate,
   profileIntervalSecs,
   onToggleExpand,
@@ -74,8 +79,11 @@ function HotkeyCardBase({
   // repeat 字段缺省视为 true（与 daemon serde default 对齐）
   const repeat = hotkey.repeat !== false;
 
+  // 兼容历史数据：modifiers 可能为 undefined（极旧的内存对象）。
+  const modifiers = hotkey.modifiers ?? [];
+
   // 检测保留组合键（仅警告，不阻止）
-  const reservedKey = `${hotkey.modifier_key}+${displayKey(hotkey.trigger_key)}`;
+  const reservedKey = `${modifiers.join("+")}+${displayKey(hotkey.trigger_key)}`;
   const isReserved = COMMON_RESERVED_COMBOS.has(reservedKey);
 
   // ComboBadge 三态判定
@@ -144,9 +152,10 @@ function HotkeyCardBase({
       <div className={styles.hkCardHead}>
         <span data-stop-card>
           <ComboBadge
-            modifierKey={hotkey.modifier_key}
+            modifiers={modifiers}
             triggerKey={hotkey.trigger_key}
             state={badgeState}
+            pendingModifiers={pendingModifiers}
             conflictHint={conflictHint}
             onClick={onToggleRecord}
             size="large"
@@ -193,9 +202,32 @@ function HotkeyCardBase({
       {/* ============ 展开态内联编辑 ============ */}
       {expanded && (
         <div className={styles.hkCardBody} data-stop-card onClick={(e) => e.stopPropagation()}>
+          {/* 显眼的录制按钮 —— 与左上角徽章组成"双入口"，新用户一定能找到 */}
+          <div className={styles.hkCardRecordRow}>
+            <KeyboardLayoutFloat20Regular className={styles.hkMuted} />
+            <span className={styles.hkCardRecordLabel}>组合键：</span>
+            <ComboBadge
+              modifiers={modifiers}
+              triggerKey={hotkey.trigger_key}
+              state={badgeState}
+              pendingModifiers={pendingModifiers}
+              conflictHint={conflictHint}
+              onClick={onToggleRecord}
+              size="medium"
+            />
+            <span style={{ flex: 1 }} />
+            <Button
+              appearance={recording ? "primary" : "secondary"}
+              size="small"
+              icon={<Record20Regular />}
+              onClick={onToggleRecord}
+            >
+              {recording ? "停止录制" : "重新录制"}
+            </Button>
+          </div>
           {recording && (
             <Caption1 className={styles.hkCardHint}>
-              正在录制 · 请按下组合键，按 Esc 取消
+              支持任意多修饰键（Ctrl / Alt / Shift / Meta）；按下字母 / 数字 / F1-F12 完成，Esc 取消
             </Caption1>
           )}
 

@@ -2,30 +2,28 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { startRecording } from "../lib/recorder";
 import type { ToastKind } from "../types";
 
-interface CapturedCombo {
-  modifier: string | null;
-  trigger: string;
-}
-
 interface Options {
   flash: (kind: ToastKind, text: string) => void;
-  onCaptured: (combo: { modifier: string; trigger: string }) => void;
+  onCaptured: (combo: { modifiers: string[]; trigger: string }) => void;
 }
 
 /**
  * useRecorder
  *
- * 状态机：idle → recording → idle。
+ * 状态机：idle → recording（修饰键累积中） → idle。
  * 调用 toggle() 在两个状态间切换。
+ * 录制态期间通过 `pendingModifiers` 实时反馈用户按下的修饰键集合（UI 用）。
  */
 export function useRecorder({ flash, onCaptured }: Options) {
   const [recording, setRecording] = useState(false);
+  const [pendingModifiers, setPendingModifiers] = useState<string[]>([]);
   const cancelRef = useRef<(() => void) | null>(null);
 
   const stop = useCallback(() => {
     cancelRef.current?.();
     cancelRef.current = null;
     setRecording(false);
+    setPendingModifiers([]);
   }, []);
 
   // 卸载时清理
@@ -34,24 +32,31 @@ export function useRecorder({ flash, onCaptured }: Options) {
   const start = useCallback(() => {
     if (recording) return;
     setRecording(true);
-    cancelRef.current = startRecording((res) => {
-      setRecording(false);
-      cancelRef.current = null;
-      if (res.kind === "captured") {
-        const captured = res.combo as CapturedCombo;
-        onCaptured({
-          modifier: captured.modifier ?? "Ctrl",
-          trigger: captured.trigger,
-        });
-        flash("success", "组合键已录入");
-      } else if (res.kind === "unsupported") {
-        flash(
-          "error",
-          `不支持的按键：${res.raw}（请用字母 / 数字 / F1-F12 / 反引号）`,
-        );
-      }
-      // cancelled 静默处理
-    });
+    setPendingModifiers([]);
+    cancelRef.current = startRecording(
+      (res) => {
+        setRecording(false);
+        setPendingModifiers([]);
+        cancelRef.current = null;
+        if (res.kind === "captured") {
+          onCaptured({
+            modifiers: res.combo.modifiers,
+            trigger: res.combo.trigger,
+          });
+          const label = [...res.combo.modifiers, res.combo.trigger].join(" + ");
+          flash("success", `已录入 ${label}`);
+        } else if (res.kind === "unsupported") {
+          flash(
+            "error",
+            `不支持的按键：${res.raw}（请用字母 / 数字 / F1-F12 / 反引号）`,
+          );
+        }
+        // cancelled 静默处理
+      },
+      {
+        onProgress: (mods) => setPendingModifiers(mods),
+      },
+    );
   }, [recording, onCaptured, flash]);
 
   const toggle = useCallback(() => {
@@ -59,6 +64,5 @@ export function useRecorder({ flash, onCaptured }: Options) {
     else start();
   }, [recording, start, stop]);
 
-  return { recording, start, stop, toggle };
+  return { recording, pendingModifiers, start, stop, toggle };
 }
-

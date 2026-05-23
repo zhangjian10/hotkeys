@@ -362,6 +362,23 @@ export const useStyles = makeStyles({
     paddingTop: "4px",
   },
 
+  /* 展开态顶部的"组合键 / 重新录制"行 —— 让录制入口非常显眼 */
+  hkCardRecordRow: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: "10px",
+    paddingBlock: "8px",
+    paddingInline: "10px",
+    border: `1px dashed ${tokens.colorNeutralStroke2}`,
+    borderRadius: "6px",
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  hkCardRecordLabel: {
+    fontSize: "12.5px",
+    color: tokens.colorNeutralForeground2,
+    flexShrink: 0,
+  },
+
   /* ================= ComboBadge ================= */
   comboBadge: {
     cursor: "pointer",

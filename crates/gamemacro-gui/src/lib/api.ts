@@ -3,7 +3,12 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export interface HotkeyConfig {
-  modifier_key: string;
+  /**
+   * 修饰键集合（每项必须出自 ALL_MODIFIERS）。空数组 = 无修饰键（不推荐，
+   * 单字母会与游戏内输入冲突）。daemon 永远按字典序去重存储；GUI 写入前
+   * 也应保持有序。
+   */
+  modifiers: string[];
   trigger_key: string;
   input_string: string;
   description: string | null;
@@ -173,11 +178,29 @@ export function emptyConfig(): AppConfig {
 /** 新建一条空热键（默认 repeat=true，与 daemon 历史行为一致）。 */
 export function emptyHotkey(): HotkeyConfig {
   return {
-    modifier_key: "Ctrl",
+    modifiers: ["Ctrl"],
     trigger_key: "A",
     input_string: "",
     description: null,
     repeat: true,
     interval_secs_override: null,
   };
+}
+
+/** 把任意 modifiers 序列化为字典序去重的"组合键身份"，与 core::combo_signature 对齐。 */
+export function comboSignature(hk: HotkeyConfig): string {
+  const sorted = [...new Set(hk.modifiers)].sort();
+  return sorted.length === 0
+    ? hk.trigger_key
+    : `${sorted.join("+")}::${hk.trigger_key}`;
+}
+
+/** 规范化 modifiers：排序+去重，过滤空串。供 GUI 写入路径调用。 */
+export function normalizeModifiers(mods: readonly string[]): string[] {
+  const set = new Set<string>();
+  for (const m of mods) {
+    const t = m.trim();
+    if (t) set.add(t);
+  }
+  return [...set].sort();
 }

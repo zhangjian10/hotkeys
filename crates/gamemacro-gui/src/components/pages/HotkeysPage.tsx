@@ -10,6 +10,7 @@ import {
   Search20Regular,
 } from "@fluentui/react-icons";
 import type { HotkeyConfig, Profile } from "../../lib/api";
+import { comboSignature } from "../../lib/api";
 import { useStyles } from "../../styles/useStyles";
 import { HotkeyCard } from "../HotkeyCard";
 
@@ -19,6 +20,8 @@ export interface HotkeysPageProps {
   total: number;
   query: string;
   recording: boolean;
+  /** 录制态实时按下的修饰键（仅展开的那条卡片用） */
+  pendingModifiers?: string[];
   /** 当前展开内联编辑的热键 index；-1 表示无 */
   expandedIndex: number;
   onChangeQuery: (v: string) => void;
@@ -41,6 +44,7 @@ export function HotkeysPage({
   hotkeys,
   total,
   recording,
+  pendingModifiers,
   query,
   expandedIndex,
   onChangeQuery,
@@ -116,11 +120,9 @@ export function HotkeysPage({
         <div style={{ display: "flex", flexDirection: "column", rowGap: 8 }}>
           {hotkeys.map((item) => {
             const isExpanded = item.index === expandedIndex;
+            const sig = comboSignature(item.hotkey);
             const isDuplicate = profile.hotkeys.some(
-              (h, j) =>
-                j !== item.index &&
-                h.modifier_key === item.hotkey.modifier_key &&
-                h.trigger_key === item.hotkey.trigger_key,
+              (h, j) => j !== item.index && comboSignature(h) === sig,
             );
 
             return (
@@ -130,6 +132,11 @@ export function HotkeysPage({
                 index={item.index}
                 expanded={isExpanded}
                 recording={recording && item.index === expandedIndex}
+                pendingModifiers={
+                  recording && item.index === expandedIndex
+                    ? pendingModifiers
+                    : undefined
+                }
                 duplicate={isDuplicate}
                 profileIntervalSecs={profileInterval}
                 onToggleExpand={() => onToggleExpand(item.index)}
