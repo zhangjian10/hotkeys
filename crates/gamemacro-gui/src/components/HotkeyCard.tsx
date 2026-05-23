@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback } from "react";
 
 import {
   Button,
@@ -33,7 +33,6 @@ import {
 import { COMMON_RESERVED_COMBOS } from "../constants/app";
 import { useStyles } from "../styles/useStyles";
 import { ComboBadge, type ComboBadgeState } from "./ComboBadge";
-import { InputRecorderDialog } from "./InputRecorderDialog";
 
 
 export interface HotkeyCardProps {
@@ -77,7 +76,6 @@ function HotkeyCardBase({
   onDelete,
 }: HotkeyCardProps) {
   const styles = useStyles();
-  const [inputRecorderOpen, setInputRecorderOpen] = useState(false);
 
   // repeat 字段缺省视为 true（与 engine serde default 对齐）
 
@@ -135,25 +133,15 @@ function HotkeyCardBase({
     }
     const value = data.value ?? Number(data.displayValue ?? "");
     if (Number.isFinite(value)) {
-      onChange({
-        interval_secs_override: Math.max(1, Math.floor(value as number)),
-      });
+      const next = Math.floor(value as number);
+      onChange({ interval_secs_override: next > 0 ? next : null });
     }
   };
 
-  const overrideValue = hotkey.interval_secs_override ?? null;
-
-  const closeInputRecorder = useCallback(() => {
-    setInputRecorderOpen(false);
-  }, []);
-
-  const saveInputRecord = useCallback(
-    (value: string) => {
-      onChange({ input_string: value });
-      setInputRecorderOpen(false);
-    },
-    [onChange],
-  );
+  const rawOverride = hotkey.interval_secs_override;
+  const overrideValue =
+    typeof rawOverride === "number" && rawOverride > 0 ? rawOverride : null;
+  const effectiveInterval = overrideValue ?? Math.max(1, profileIntervalSecs);
 
   return (
 
@@ -237,22 +225,15 @@ function HotkeyCardBase({
           <div className={styles.hkInputField}>
             <div className={styles.hkInputHeader}>
               <span className={styles.hkInputLabel}>输入内容</span>
-              <Button
-                appearance="secondary"
-                size="small"
-                disabled={recording}
-                onClick={() => setInputRecorderOpen(true)}
-              >
-                录制输入
-              </Button>
             </div>
             <Textarea
               value={hotkey.input_string}
-              readOnly
+              disabled={recording}
               spellCheck={false}
               resize="vertical"
               rows={4}
               className={styles.hkCardTextarea}
+              onChange={(_, d) => onChange({ input_string: d.value })}
             />
           </div>
 
@@ -276,12 +257,11 @@ function HotkeyCardBase({
                   size="small"
                   min={1}
                   step={1}
-                  value={overrideValue ?? undefined}
+                  value={effectiveInterval}
                   displayValue={
-
                     overrideValue !== null
                       ? `${overrideValue} 秒`
-                      : `跟随 Profile (${profileIntervalSecs} 秒)`
+                      : `${effectiveInterval} 秒（全局）`
                   }
                   disabled={recording}
                   onChange={handleSpin}
@@ -314,13 +294,7 @@ function HotkeyCardBase({
             </Button>
           </div>
 
-          <InputRecorderDialog
-            open={inputRecorderOpen}
-            initialValue={hotkey.input_string}
-            onCancel={closeInputRecorder}
-            onSave={saveInputRecord}
 
-          />
         </div>
       )}
     </div>

@@ -563,19 +563,7 @@ export const useStyles = makeStyles({
     textAlign: "center",
     minHeight: "28px",
   },
-  inputRecorderBox: {
-    display: "flex",
-    flexDirection: "column",
-    rowGap: "10px",
-    paddingBlock: "12px",
-  },
-  inputRecorderTextarea: {
-    fontFamily: tokens.fontFamilyMonospace,
-    "& textarea": {
-      minHeight: "140px",
-      maxHeight: "280px",
-    },
-  },
+
 
 
   /* ================= 空状态（无 profile / 无 hotkey 搜索） ================= */
