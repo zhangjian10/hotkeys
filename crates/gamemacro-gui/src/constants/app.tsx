@@ -37,8 +37,5 @@ export const COMMON_RESERVED_COMBOS = new Set([
   "Ctrl+F4",
 ]);
 
-/** 撤销栈最大深度。 */
-export const HISTORY_LIMIT = 30;
-
 /** Toaster 的全局 ID。 */
 export const TOASTER_ID = "app-toaster";

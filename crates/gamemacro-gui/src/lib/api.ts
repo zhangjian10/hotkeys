@@ -7,6 +7,10 @@ export interface HotkeyConfig {
   trigger_key: string;
   input_string: string;
   description: string | null;
+  /** 按一次开始循环输入、再按一次停止；缺省 true（与 daemon 默认一致）。 */
+  repeat?: boolean;
+  /** 覆盖此条热键专属的循环间隔（秒）。null/undefined 时使用 profile 的 auto_input_interval_secs。 */
+  interval_secs_override?: number | null;
 }
 
 /** 一个 Profile 对应某一类窗口（例如某款游戏） */
@@ -133,4 +137,16 @@ export function emptyProfile(name = "新建配置"): Profile {
 
 export function emptyConfig(): AppConfig {
   return { profiles: [] };
+}
+
+/** 新建一条空热键（默认 repeat=true，与 daemon 历史行为一致）。 */
+export function emptyHotkey(): HotkeyConfig {
+  return {
+    modifier_key: "Ctrl",
+    trigger_key: "A",
+    input_string: "",
+    description: null,
+    repeat: true,
+    interval_secs_override: null,
+  };
 }

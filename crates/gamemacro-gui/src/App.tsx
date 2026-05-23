@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Toaster, useId } from "@fluentui/react-components";
 
 import {
   type HotkeyConfig,
   type Profile,
+  emptyHotkey,
   emptyProfile,
   loadConfig,
   revealConfig,
@@ -17,7 +18,6 @@ import { useStyles } from "./styles/useStyles";
 /* hooks */
 import { useConfigState } from "./hooks/useConfigState";
 import { useFlash } from "./hooks/useFlash";
-import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useForegroundTitle } from "./hooks/useForegroundTitle";
 import { useTryInput } from "./hooks/useTryInput";
 import { useRecorder } from "./hooks/useRecorder";
@@ -31,7 +31,6 @@ import {
 /* components */
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { TitleBar } from "./components/TitleBar";
-import { DirtyBar } from "./components/DirtyBar";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { NoProfilesEmpty } from "./components/NoProfilesEmpty";
 import { HotkeysPage } from "./components/pages/HotkeysPage";
@@ -47,6 +46,9 @@ interface ConfirmTask {
   apply: () => void;
 }
 
+/** autosave 防抖延迟。daemon 也以 500ms 防抖，整体最多 1s 内反映变更。 */
+const SAVE_DEBOUNCE_MS = 500;
+
 export default function App() {
   const styles = useStyles();
   const toasterId = useId(TOASTER_ID);
@@ -54,7 +56,7 @@ export default function App() {
 
   /* ------------------------- 数据/派生 ------------------------- */
   const cfg = useConfigState();
-  const { config, saved, dirty, canUndo, canRedo } = cfg;
+  const { config, lastSavedAt } = cfg;
 
   const [path, setPath] = useState("");
   const [activeProfile, setActiveProfile] = useState(-1);
@@ -103,45 +105,37 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ------------------------- 保存 / 重置 ------------------------- */
-  const doSave = useCallback(async () => {
-    try {
-      await saveConfig(config);
-      cfg.markSaved();
-      flash("success", "已保存");
-    } catch (e) {
-      flash("error", `保存失败：${formatErr(e)}`);
+  /* ------------------------- Autosave ------------------------- */
+  // config 每次变化都重置 timer；timer 触发后异步写盘并更新 lastSavedAt。
+  // 初次 load 之前 lastSavedAt === null，跳过；load 完成后 useConfigState
+  // 把 lastSavedAt 置为当时时间，因此首屏不会触发一次空保存。
+  const saveTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (lastSavedAt === null) return; // 还没加载完，不要写盘
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
     }
-  }, [config, cfg, flash]);
+    saveTimerRef.current = window.setTimeout(() => {
+      saveTimerRef.current = null;
+      void (async () => {
+        try {
+          await saveConfig(config);
+          cfg.markSaved(Date.now());
+        } catch (e) {
+          flash("error", `自动保存失败：${formatErr(e)}`);
+        }
+      })();
+    }, SAVE_DEBOUNCE_MS);
 
-  const doResetAll = useCallback(() => {
-    recorder.stop();
-    cfg.resetAll();
-    setActiveProfile((cur) =>
-      saved.profiles.length === 0
-        ? -1
-        : Math.min(Math.max(cur, 0), saved.profiles.length - 1),
-    );
-    flash("info", "已恢复到上次保存");
-  }, [recorder, cfg, saved.profiles.length, flash]);
-
-  const doResetCurrentPage = useCallback(() => {
-    if (activeProfile < 0) return;
-    if (!saved.profiles[activeProfile]) {
-      flash("info", "当前配置在上次保存里不存在，请用「全部重置」");
-      return;
-    }
-    cfg.resetCurrent(activeProfile);
-    flash("info", "当前配置已恢复");
-  }, [activeProfile, saved, cfg, flash]);
-
-  /* ------------------------- 全局快捷键 ------------------------- */
-  useGlobalShortcuts({
-    enabled: !recording,
-    onSave: () => void doSave(),
-    onUndo: cfg.undo,
-    onRedo: cfg.redo,
-  });
+    return () => {
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+    };
+    // 仅在 config 变化时排队保存；cfg / flash 是稳定回调，无需进依赖。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config]);
 
   /* ------------------------- 试一下 ------------------------- */
   const tryInput = useTryInput({ flash });
@@ -186,7 +180,7 @@ export default function App() {
       const target = config.profiles[idx];
       if (!target) return;
       setConfirm({
-        label: `要删除配置「${target.name}」吗？该配置下的 ${target.hotkeys.length} 条热键会一起被移除。删除后仍可用 Ctrl+Z 撤销。`,
+        label: `要删除配置「${target.name}」吗？该配置下的 ${target.hotkeys.length} 条热键会一起被移除。此操作不可撤销。`,
         apply: () => {
           cfg.patch((c) => ({
             ...c,
@@ -246,15 +240,7 @@ export default function App() {
     if (!profile) return;
     const newIndex = profile.hotkeys.length;
     cfg.patchProfile(activeProfile, {
-      hotkeys: [
-        ...profile.hotkeys,
-        {
-          modifier_key: "Ctrl",
-          trigger_key: "A",
-          input_string: "",
-          description: null,
-        },
-      ],
+      hotkeys: [...profile.hotkeys, emptyHotkey()],
     });
     setSection("hotkeys");
     setEditingHotkey(newIndex);
@@ -274,10 +260,7 @@ export default function App() {
       if (editingHotkey === i) setEditingHotkey(-1);
       else if (editingHotkey > i) setEditingHotkey((cur) => cur - 1);
       if (target) {
-        flash(
-          "info",
-          `已删除「${target.description || comboText(target)}」，按 Ctrl+Z 可撤销`,
-        );
+        flash("info", `已删除「${target.description || comboText(target)}」`);
       }
     },
     [recording, profile, cfg, activeProfile, editingHotkey, flash],
@@ -327,19 +310,6 @@ export default function App() {
         />
 
         <div className={styles.content}>
-          {dirty && (
-            <DirtyBar
-              recording={recording}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              onSave={() => void doSave()}
-              onResetAll={doResetAll}
-              onResetPage={doResetCurrentPage}
-              onUndo={cfg.undo}
-              onRedo={cfg.redo}
-            />
-          )}
-
           {profile ? (
             <Content
               profile={profile}
