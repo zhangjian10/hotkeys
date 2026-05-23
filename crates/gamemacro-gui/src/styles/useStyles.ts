@@ -256,13 +256,35 @@ export const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
   },
   emptyTagHint: {
-    paddingInline: "16px",
-    paddingBlock: "16px",
     color: tokens.colorNeutralForeground3,
+  },
+  windowKeywords: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: "8px",
+    paddingInline: "16px",
+    paddingBlock: "4px 12px",
     backgroundColor: tokens.colorNeutralBackground1,
+  },
+  windowKeywordsHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    columnGap: "12px",
+  },
+  windowKeywordsTitle: {
+    fontSize: "13px",
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground2,
+  },
+  windowKeywordTags: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
   },
 
   /* ================= 热键搜索条 + 卡片列表 ================= */
+
   hkSearch: {
     paddingTop: "4px",
     paddingBottom: "4px",
@@ -283,7 +305,11 @@ export const useStyles = makeStyles({
     "&:hover": {
       border: `1px solid ${tokens.colorNeutralStroke1}`,
     },
+    "&:focus": {
+      outline: "none",
+    },
     "&:focus-visible": {
+
       outline: `2px solid ${tokens.colorStrokeFocus2}`,
       outlineOffset: "1px",
     },
@@ -301,10 +327,17 @@ export const useStyles = makeStyles({
     paddingBlock: "10px",
     minHeight: "56px",
   },
+  hkCardComboCell: {
+    width: "150px",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+  },
   hkCardText: {
     flex: 1,
     minWidth: 0,
     display: "flex",
+
     flexDirection: "column",
     rowGap: "2px",
   },
@@ -324,6 +357,14 @@ export const useStyles = makeStyles({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
+  hkCardComboRight: {
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    maxWidth: "45%",
+  },
+
   hkCardBody: {
     display: "flex",
     flexDirection: "column",
@@ -339,6 +380,22 @@ export const useStyles = makeStyles({
     color: tokens.colorPaletteYellowForeground1,
     paddingInline: "4px",
   },
+  hkInputField: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: "6px",
+  },
+  hkInputHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    columnGap: "12px",
+  },
+  hkInputLabel: {
+    fontSize: "14px",
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+  },
   hkCardTextarea: {
     fontFamily: tokens.fontFamilyMonospace,
     "& textarea": {
@@ -346,6 +403,7 @@ export const useStyles = makeStyles({
       maxHeight: "240px",
     },
   },
+
   hkCardControls: {
     display: "flex",
     alignItems: "center",
@@ -369,22 +427,7 @@ export const useStyles = makeStyles({
     paddingTop: "4px",
   },
 
-  /* 展开态顶部的"组合键 / 重新录制"行 —— 让录制入口非常显眼 */
-  hkCardRecordRow: {
-    display: "flex",
-    alignItems: "center",
-    columnGap: "10px",
-    paddingBlock: "8px",
-    paddingInline: "10px",
-    border: `1px dashed ${tokens.colorNeutralStroke2}`,
-    borderRadius: "6px",
-    backgroundColor: tokens.colorNeutralBackground1,
-  },
-  hkCardRecordLabel: {
-    fontSize: "12.5px",
-    color: tokens.colorNeutralForeground2,
-    flexShrink: 0,
-  },
+
 
   /* ================= ComboBadge ================= */
   comboBadge: {
@@ -392,11 +435,16 @@ export const useStyles = makeStyles({
     fontFamily: tokens.fontFamilyMonospace,
     letterSpacing: "0.02em",
     paddingInline: "10px",
-    height: "28px",
+    minHeight: "28px",
+    height: "auto",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    whiteSpace: "normal",
     "&:focus-visible": {
       outline: `2px solid ${tokens.colorStrokeFocus2}`,
       outlineOffset: "1px",
     },
+
     // hover / focus 时让"hover-only"图标浮现（默认 visibility:hidden 占位，
     // 避免 layout shift）
     "&:hover [data-combo-hover-icon]": {
@@ -406,7 +454,27 @@ export const useStyles = makeStyles({
       visibility: "visible",
     },
   },
+  comboBadgeContent: {
+    display: "inline-flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    rowGap: "2px",
+    columnGap: "4px",
+    lineHeight: "18px",
+    whiteSpace: "normal",
+  },
+  comboBadgeKey: {
+    display: "inline-flex",
+    alignItems: "center",
+    borderRadius: "4px",
+    paddingInline: "3px",
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  comboBadgeSeparator: {
+    color: tokens.colorNeutralForeground3,
+  },
   /** 静态展示（不可点击）的 ComboBadge：去掉 cursor pointer + focus ring */
+
   comboBadgeStatic: {
     cursor: "default",
     "&:focus-visible": {
@@ -495,6 +563,20 @@ export const useStyles = makeStyles({
     textAlign: "center",
     minHeight: "28px",
   },
+  inputRecorderBox: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: "10px",
+    paddingBlock: "12px",
+  },
+  inputRecorderTextarea: {
+    fontFamily: tokens.fontFamilyMonospace,
+    "& textarea": {
+      minHeight: "140px",
+      maxHeight: "280px",
+    },
+  },
+
 
   /* ================= 空状态（无 profile / 无 hotkey 搜索） ================= */
   empty: {

@@ -1,4 +1,5 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
+
 import {
   Button,
   Caption1,
@@ -19,20 +20,21 @@ import {
 import {
   Copy20Regular,
   Delete20Regular,
-  Edit20Regular,
-  KeyboardLayoutFloat20Regular,
   MoreHorizontal20Regular,
   Play20Regular,
 } from "@fluentui/react-icons";
+
 
 import {
   type HotkeyConfig,
   displayKey,
 } from "../lib/api";
-import { previewInput } from "../lib/utils";
+
 import { COMMON_RESERVED_COMBOS } from "../constants/app";
 import { useStyles } from "../styles/useStyles";
 import { ComboBadge, type ComboBadgeState } from "./ComboBadge";
+import { InputRecorderDialog } from "./InputRecorderDialog";
+
 
 export interface HotkeyCardProps {
   hotkey: HotkeyConfig;
@@ -75,8 +77,10 @@ function HotkeyCardBase({
   onDelete,
 }: HotkeyCardProps) {
   const styles = useStyles();
+  const [inputRecorderOpen, setInputRecorderOpen] = useState(false);
 
   // repeat 字段缺省视为 true（与 engine serde default 对齐）
+
   const repeat = hotkey.repeat !== false;
 
   // 兼容历史数据：modifiers 可能为 undefined（极旧的内存对象）。
@@ -99,9 +103,9 @@ function HotkeyCardBase({
       ? `${reservedKey} 通常用于系统快捷键，可能与其它应用冲突`
       : undefined;
 
-  const preview = previewInput(hotkey.input_string);
 
   const handleCardClick = useCallback(
+
     (e: React.MouseEvent) => {
       // 控件内点击不要冒泡到卡片
       if ((e.target as HTMLElement).closest("[data-stop-card]")) return;
@@ -139,7 +143,20 @@ function HotkeyCardBase({
 
   const overrideValue = hotkey.interval_secs_override ?? null;
 
+  const closeInputRecorder = useCallback(() => {
+    setInputRecorderOpen(false);
+  }, []);
+
+  const saveInputRecord = useCallback(
+    (value: string) => {
+      onChange({ input_string: value });
+      setInputRecorderOpen(false);
+    },
+    [onChange],
+  );
+
   return (
+
     <div
       className={`${styles.hkCard} ${expanded ? styles.hkCardExpanded : ""}`}
       role="button"
@@ -150,7 +167,14 @@ function HotkeyCardBase({
     >
       {/* ============ 折叠态主行（展开时仍保留作头部） ============ */}
       <div className={styles.hkCardHead}>
-        <span data-stop-card>
+        <div className={styles.hkCardText}>
+          <span className={styles.hkCardTitle}>
+            {hotkey.description?.trim() || "（未命名）"}
+          </span>
+
+        </div>
+
+        <span className={styles.hkCardComboRight} data-stop-card>
           <ComboBadge
             modifiers={modifiers}
             triggerKey={hotkey.trigger_key}
@@ -158,20 +182,12 @@ function HotkeyCardBase({
             pendingModifiers={pendingModifiers}
             conflictHint={conflictHint}
             onClick={onToggleRecord}
-            size="large"
+            size="medium"
           />
         </span>
 
-        <div className={styles.hkCardText}>
-          <span className={styles.hkCardTitle}>
-            {hotkey.description?.trim() || "（未命名）"}
-          </span>
-          <span className={styles.hkCardPreview} title={preview}>
-            {preview}
-          </span>
-        </div>
-
         <span data-stop-card>
+
           <Menu>
             <MenuTrigger disableButtonEnhancement>
               <MenuButton
@@ -202,31 +218,9 @@ function HotkeyCardBase({
       {/* ============ 展开态内联编辑 ============ */}
       {expanded && (
         <div className={styles.hkCardBody} data-stop-card onClick={(e) => e.stopPropagation()}>
-          {/* 显眼的录制按钮 —— 与左上角徽章组成"双入口"，新用户一定能找到 */}
-          <div className={styles.hkCardRecordRow}>
-            <KeyboardLayoutFloat20Regular className={styles.hkMuted} />
-            <span className={styles.hkCardRecordLabel}>快捷键：</span>
-            <ComboBadge
-              modifiers={modifiers}
-              triggerKey={hotkey.trigger_key}
-              state={badgeState}
-              pendingModifiers={pendingModifiers}
-              conflictHint={conflictHint}
-              interactive={false}
-              size="medium"
-            />
-            <span style={{ flex: 1 }} />
-            <Button
-              appearance={recording ? "primary" : "secondary"}
-              size="small"
-              icon={<Edit20Regular />}
-              onClick={onToggleRecord}
-            >
-              {recording ? "停止录制" : "修改"}
-            </Button>
-          </div>
           {recording && (
             <Caption1 className={styles.hkCardHint}>
+
               支持任意多修饰键（Ctrl / Alt / Shift / Meta）；按下字母 / 数字 / F1-F12 完成，Esc 取消
             </Caption1>
           )}
@@ -240,17 +234,28 @@ function HotkeyCardBase({
             />
           </Field>
 
-          <Field label="输入内容" hint="按你输入的字符原样发送。需要回车请直接在文本里换行。">
+          <div className={styles.hkInputField}>
+            <div className={styles.hkInputHeader}>
+              <span className={styles.hkInputLabel}>输入内容</span>
+              <Button
+                appearance="secondary"
+                size="small"
+                disabled={recording}
+                onClick={() => setInputRecorderOpen(true)}
+              >
+                录制输入
+              </Button>
+            </div>
             <Textarea
               value={hotkey.input_string}
-              disabled={recording}
-              onChange={(_, d) => onChange({ input_string: d.value })}
+              readOnly
               spellCheck={false}
               resize="vertical"
               rows={4}
               className={styles.hkCardTextarea}
             />
-          </Field>
+          </div>
+
 
           <div className={styles.hkCardControls}>
             <div className={styles.hkCardSwitch}>
@@ -258,50 +263,46 @@ function HotkeyCardBase({
                 checked={repeat}
                 disabled={recording}
                 onChange={(_, d) => onChange({ repeat: d.checked })}
-                label="按一次循环执行（再按一次停止）"
+                label="循环执行"
+
               />
             </div>
 
-            <div className={styles.hkCardOverride}>
-              <span className={styles.hkMuted}>循环间隔覆盖：</span>
-              <SpinButton
-                size="small"
-                min={1}
-                step={1}
-                value={overrideValue}
-                displayValue={
-                  overrideValue !== null
-                    ? `${overrideValue} 秒`
-                    : `跟随 Profile (${profileIntervalSecs} 秒)`
-                }
-                disabled={recording || !repeat}
-                onChange={handleSpin}
-              />
-              {overrideValue !== null && (
-                <Tooltip content="清除覆盖，跟随 Profile 默认" relationship="label">
-                  <Button
-                    appearance="subtle"
-                    size="small"
-                    onClick={() => onChange({ interval_secs_override: null })}
-                  >
-                    清除
-                  </Button>
-                </Tooltip>
-              )}
-            </div>
+
+            {repeat && (
+              <div className={styles.hkCardOverride}>
+                <span className={styles.hkMuted}>间隔：</span>
+                <SpinButton
+                  size="small"
+                  min={1}
+                  step={1}
+                  value={overrideValue ?? undefined}
+                  displayValue={
+
+                    overrideValue !== null
+                      ? `${overrideValue} 秒`
+                      : `跟随 Profile (${profileIntervalSecs} 秒)`
+                  }
+                  disabled={recording}
+                  onChange={handleSpin}
+                />
+                {overrideValue !== null && (
+                  <Tooltip content="清除覆盖，跟随 Profile 默认" relationship="label">
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      onClick={() => onChange({ interval_secs_override: null })}
+                    >
+                      清除
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
+            )}
           </div>
 
+
           <div className={styles.hkCardActions}>
-            <Tooltip content="3 秒后向当前焦点输入内容" relationship="label">
-              <Button
-                appearance="subtle"
-                icon={<Play20Regular />}
-                disabled={recording || !hotkey.input_string.trim()}
-                onClick={() => onTry(hotkey.input_string)}
-              >
-                试一下
-              </Button>
-            </Tooltip>
             <span style={{ flex: 1 }} />
             <Button
               appearance="secondary"
@@ -312,9 +313,18 @@ function HotkeyCardBase({
               完成
             </Button>
           </div>
+
+          <InputRecorderDialog
+            open={inputRecorderOpen}
+            initialValue={hotkey.input_string}
+            onCancel={closeInputRecorder}
+            onSave={saveInputRecord}
+
+          />
         </div>
       )}
     </div>
+
   );
 }
 

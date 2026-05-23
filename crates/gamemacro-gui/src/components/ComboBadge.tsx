@@ -1,6 +1,8 @@
-import { memo } from "react";
+import { Fragment, memo, type ReactElement, type ReactNode } from "react";
+
 import { Badge, Tooltip, mergeClasses } from "@fluentui/react-components";
-import { Edit16Regular, Record16Regular } from "@fluentui/react-icons";
+import { Record16Regular } from "@fluentui/react-icons";
+
 
 import { displayKey } from "../lib/api";
 import { useStyles } from "../styles/useStyles";
@@ -17,15 +19,23 @@ export interface ComboBadgeProps {
   /** conflict 态时显示的 tooltip 文案 */
   conflictHint?: string;
   /**
-   * `interactive=true`（默认）：可点击；static 态默认不显示图标，hover 时
-   * 浮现编辑图标（不引起 layout shift——图标默认 visibility:hidden 占位）。
+   * `interactive=true`（默认）：可点击修改快捷键。
    * `interactive=false`：纯展示，无图标 / 无 hover / 无 tooltip / 不响应点击；
    * 用于展开态把 ComboBadge 当作"快捷键值显示"使用。
    */
+
   interactive?: boolean;
   /** 点击徽章；仅 interactive=true 时生效 */
   onClick?: () => void;
   size?: "small" | "medium" | "large";
+}
+
+function comboKeys(modifiers: string[], triggerKey: string): string[] {
+  return [...modifiers, displayKey(triggerKey)].filter(Boolean);
+}
+
+function comboLabel(keys: string[]): string {
+  return keys.join(" + ");
 }
 
 /**
@@ -34,6 +44,7 @@ export interface ComboBadgeProps {
 function ComboBadgeBase({
   modifiers,
   triggerKey,
+
   state,
   pendingModifiers = [],
   conflictHint,
@@ -43,40 +54,47 @@ function ComboBadgeBase({
 }: ComboBadgeProps) {
   const styles = useStyles();
 
+  const staticKeys = comboKeys(modifiers, triggerKey);
+  const pendingKeys = [...pendingModifiers, "…"];
+
   const recordingContent =
     pendingModifiers.length > 0
-      ? `${pendingModifiers.join(" + ")} + …`
+      ? comboLabel(pendingKeys)
       : "按下快捷键 · Esc 取消";
 
-  const staticContent =
-    modifiers.length === 0
-      ? displayKey(triggerKey)
-      : `${modifiers.join(" + ")} + ${displayKey(triggerKey)}`;
+  const staticContent = comboLabel(staticKeys);
 
-  const content = state === "recording" ? recordingContent : staticContent;
+  const comboContent = (keys: string[]): ReactNode => (
+    <span className={styles.comboBadgeContent}>
+      {keys.map((key, index) => (
+        <Fragment key={`${key}-${index}`}>
+          {index > 0 && <span className={styles.comboBadgeSeparator}>+</span>}
+          <span className={styles.comboBadgeKey}>{key}</span>
+        </Fragment>
+      ))}
+    </span>
+  );
+
+  let content: ReactNode;
+  if (state === "recording") {
+    content =
+      pendingModifiers.length > 0 ? comboContent(pendingKeys) : recordingContent;
+  } else {
+    content = comboContent(staticKeys);
+  }
 
   // 三态都用 tint 外观（淡底+柔色字），仅靠 color 区分：
   //   static / recording -> brand（淡蓝）
   //   conflict           -> severe（淡橙，比 warning 黄更醒目，又不刺眼）
+
   const appearance = state === "recording" ? "outline" : "tint";
   const color = state === "conflict" ? "severe" : "brand";
 
-  // 图标策略：
-  //   - interactive=false：完全没有图标
-  //   - recording / conflict：始终显示对应图标（明确语义）
-  //   - static + interactive：渲染编辑图标但默认 visibility:hidden 占位，
-  //     hover 时由 CSS 切到 visible，避免 layout shift
-  let icon: JSX.Element | undefined;
-  if (interactive) {
-    if (state === "recording") icon = <Record16Regular />;
-    else if (state === "conflict") icon = <Edit16Regular />;
-    else
-      icon = (
-        <Edit16Regular data-combo-hover-icon style={{ visibility: "hidden" }} />
-      );
-  }
+  const icon: ReactElement | undefined =
+    interactive && state === "recording" ? <Record16Regular /> : undefined;
 
   const className = mergeClasses(
+
     styles.comboBadge,
     !interactive && styles.comboBadgeStatic,
     state === "recording" && styles.comboBadgeRecording,
@@ -108,9 +126,11 @@ function ComboBadgeBase({
       }
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : -1}
+      title={state === "recording" ? recordingContent : staticContent}
       aria-label={ariaLabel}
       onKeyDown={
         interactive
+
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();

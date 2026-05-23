@@ -62,7 +62,9 @@ export default function App() {
   const [expandedHotkey, setExpandedHotkey] = useState(-1);
   /** 当前正在录制组合键的热键 index；-1 表示没有 */
   const [recordingTarget, setRecordingTarget] = useState(-1);
+  const recordingTargetRef = useRef(-1);
   const [hotkeyQuery, setHotkeyQuery] = useState("");
+
   const [windowPickerOpen, setWindowPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmTask | null>(null);
@@ -70,21 +72,62 @@ export default function App() {
   const profile = useActiveProfile(config, activeProfile);
   const visibleHotkeys = useVisibleHotkeys(profile, hotkeyQuery);
 
+  /* ------------------------- Engine 状态 / 控制 ------------------------- */
+  const { status: engine, setEnabled: setEngineEnabledOptimistic } =
+    useEngineStatus();
+  const engineEnabledBeforeRecordingRef = useRef<boolean | null>(null);
+  const restartingRecordingRef = useRef(false);
+
+  const pauseEngineForRecording = useCallback(async () => {
+
+    if (engineEnabledBeforeRecordingRef.current === null) {
+      engineEnabledBeforeRecordingRef.current = engine?.enabled ?? true;
+    }
+    if (engineEnabledBeforeRecordingRef.current) {
+      try {
+        await setEngineEnabledOptimistic(false);
+      } catch (e) {
+        flash("error", formatErr(e));
+      }
+    }
+  }, [engine?.enabled, flash, setEngineEnabledOptimistic]);
+
+
+  const restoreEngineAfterRecording = useCallback(() => {
+    const shouldRestore = engineEnabledBeforeRecordingRef.current;
+    engineEnabledBeforeRecordingRef.current = null;
+    if (shouldRestore) {
+      void setEngineEnabledOptimistic(true).catch((e) =>
+        flash("error", formatErr(e)),
+      );
+    }
+  }, [flash, setEngineEnabledOptimistic]);
+
   /* ------------------------- 录制 ------------------------- */
   const recorder = useRecorder({
     flash,
     onCaptured: (combo) => {
-      // recordingTarget 在 setRecordingTarget(-1) 之前还是有效值，可放心 patch
-      const idx = recordingTarget;
+      const idx = recordingTargetRef.current;
       if (idx >= 0) {
         cfg.patchHotkey(activeProfile, idx, {
           modifiers: combo.modifiers,
           trigger_key: combo.trigger,
         });
       }
+    },
+    onSettled: () => {
+      if (restartingRecordingRef.current) {
+        restartingRecordingRef.current = false;
+        return;
+      }
+      restoreEngineAfterRecording();
+      recordingTargetRef.current = -1;
       setRecordingTarget(-1);
     },
+
   });
+
+
   const { recording, pendingModifiers } = recorder;
 
   /* ------------------------- 初始加载 ------------------------- */
@@ -298,8 +341,10 @@ export default function App() {
       if (recording && i !== expandedHotkey) {
         // 切到别的卡片要先停止录制
         recorder.stop();
+        recordingTargetRef.current = -1;
         setRecordingTarget(-1);
       }
+
       setExpandedHotkey((cur) => (cur === i ? -1 : i));
     },
     [recording, expandedHotkey, recorder],
@@ -308,28 +353,42 @@ export default function App() {
   /** 点击 ComboBadge / 「重新录制」按钮：打开录制 Dialog 并启动录制器。
    *  再次点击时（recording=true）= 取消录制并关闭 Dialog。 */
   const toggleRecordHotkey = useCallback(
-    (i: number) => {
+    async (i: number) => {
       if (recording && recordingTarget === i) {
         recorder.stop();
-        setRecordingTarget(-1);
         return;
       }
       // 取消旧录制（如果在录别的）
-      if (recording) recorder.stop();
+      if (recording) {
+        restartingRecordingRef.current = true;
+        recorder.stop();
+      }
+
       if (expandedHotkey !== i) setExpandedHotkey(i);
+      recordingTargetRef.current = i;
       setRecordingTarget(i);
+      await pauseEngineForRecording();
       recorder.start();
     },
-    [recording, recordingTarget, recorder, expandedHotkey],
+    [
+      recording,
+      recordingTarget,
+      recorder,
+      expandedHotkey,
+      pauseEngineForRecording,
+    ],
   );
 
   /** Dialog 关闭按钮 / Esc 走这条路径 */
+
   const cancelRecording = useCallback(() => {
     recorder.stop();
+    recordingTargetRef.current = -1;
     setRecordingTarget(-1);
   }, [recorder]);
 
   const patchHotkeyAt = useCallback(
+
     (i: number, patch: Partial<HotkeyConfig>) =>
       cfg.patchHotkey(activeProfile, i, patch),
     [cfg, activeProfile],
@@ -385,10 +444,10 @@ export default function App() {
     revealConfig().catch((e) => flash("error", formatErr(e)));
   }, [flash]);
 
-  /* ------------------------- Engine 状态 / 控制 ------------------------- */
-  const { status: engine, setEnabled: setEngineEnabledOptimistic } =
-    useEngineStatus();
+
+  /* ------------------------- Engine 控制 ------------------------- */
   const onRevealLog = useCallback(() => {
+
     void revealLog().catch((e) => flash("error", formatErr(e)));
   }, [flash]);
   const onSetEnabled = useCallback(

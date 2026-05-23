@@ -5,17 +5,20 @@ import type { ToastKind } from "../types";
 interface Options {
   flash: (kind: ToastKind, text: string) => void;
   onCaptured: (combo: { modifiers: string[]; trigger: string }) => void;
+  onSettled?: () => void;
 }
 
 /**
+
  * useRecorder
  *
  * 状态机：idle → recording（修饰键累积中） → idle。
  * 调用 toggle() 在两个状态间切换。
  * 录制态期间通过 `pendingModifiers` 实时反馈用户按下的修饰键集合（UI 用）。
  */
-export function useRecorder({ flash, onCaptured }: Options) {
+export function useRecorder({ flash, onCaptured, onSettled }: Options) {
   const [recording, setRecording] = useState(false);
+
   const [pendingModifiers, setPendingModifiers] = useState<string[]>([]);
   const cancelRef = useRef<(() => void) | null>(null);
 
@@ -52,15 +55,18 @@ export function useRecorder({ flash, onCaptured }: Options) {
           );
         }
         // cancelled 静默处理
+        onSettled?.();
       },
       {
         onProgress: (mods) => setPendingModifiers(mods),
+
       },
     );
-  }, [recording, onCaptured, flash]);
+  }, [recording, onCaptured, onSettled, flash]);
 
   const toggle = useCallback(() => {
     if (recording) stop();
+
     else start();
   }, [recording, start, stop]);
 

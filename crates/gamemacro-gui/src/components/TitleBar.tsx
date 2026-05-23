@@ -40,31 +40,7 @@ export function TitleBar({ title }: { title: string }) {
     <header className={styles.titleBar} data-tauri-drag-region>
       <div className={styles.titleBarLeft} data-tauri-drag-region>
         <div className={styles.titleBarIcon} data-tauri-drag-region>
-          {/* 应用图标，14×14 */}
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="none"
-            aria-hidden
-          >
-            <rect
-              x="1.5"
-              y="1.5"
-              width="13"
-              height="13"
-              rx="3"
-              stroke="currentColor"
-              strokeWidth="1.4"
-            />
-            <path
-              d="M5 7h2v3M9 5v3h2"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <GameMacroIcon />
         </div>
         <span className={styles.titleBarTitle} data-tauri-drag-region>
           {title}
@@ -97,6 +73,39 @@ export function TitleBar({ title }: { title: string }) {
         </CaptionButton>
       </div>
     </header>
+  );
+}
+
+function GameMacroIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <defs>
+        <linearGradient id="gamemacro-title-bg" x1="2" y1="2" x2="14" y2="14">
+          <stop stopColor="#604EFF" />
+          <stop offset="0.58" stopColor="#175ED2" />
+          <stop offset="1" stopColor="#00B1D2" />
+        </linearGradient>
+        <linearGradient id="gamemacro-title-bolt" x1="8" y1="3" x2="8" y2="13">
+          <stop stopColor="#FFE98A" />
+          <stop offset="1" stopColor="#FFA500" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="14" height="14" rx="3.5" fill="url(#gamemacro-title-bg)" />
+      <path
+        d="M4.1 6.2c-.9 0-1.6 1-1.6 2.2 0 1.6 1 2.1 1.9 1.2l.8-.8h5.6l.8.8c.9.9 1.9.4 1.9-1.2 0-1.2-.7-2.2-1.6-2.2-.7 0-1.1.2-1.5.5H5.6c-.4-.3-.8-.5-1.5-.5Z"
+        fill="#F7FBFF"
+      />
+      <path d="M4.4 8.1h1.8M5.3 7.2V9" stroke="#234A9B" strokeWidth="0.8" strokeLinecap="round" />
+      <circle cx="10.3" cy="7.7" r="0.45" fill="#234A9B" />
+      <circle cx="11.4" cy="8.55" r="0.45" fill="#234A9B" />
+      <path
+        d="M8.7 3.35 6.85 8.25h1.55L7.55 12.6l2.9-5.65H8.9l.9-3.6H8.7Z"
+        fill="url(#gamemacro-title-bolt)"
+        stroke="#965400"
+        strokeWidth="0.35"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import {
-  Badge,
   Button,
   Caption1,
+
   Dialog,
   DialogBody,
   DialogContent,
@@ -25,10 +25,10 @@ import {
   DocumentBulletList20Regular,
   FolderOpen20Regular,
   Search20Regular,
-  Timer20Regular,
 } from "@fluentui/react-icons";
 
 import type { Profile } from "../lib/api";
+
 import { humanKeyword, isMatchedByCurrent } from "../lib/utils";
 import { useStyles } from "../styles/useStyles";
 import { useForegroundTitle } from "../hooks/useForegroundTitle";
@@ -122,8 +122,8 @@ export function SettingsDialog({
                 <>
                   {/* 计时 */}
                   <SettingRow
-                    icon={<Timer20Regular />}
                     label="自动输入间隔"
+
                     desc="持续按住循环热键时，每隔多少秒重发一次输入。可被每条热键单独覆盖。"
                     control={
                       <SpinButton
@@ -136,8 +136,8 @@ export function SettingsDialog({
                     }
                   />
                   <SettingRow
-                    icon={<Timer20Regular />}
                     label="按键间延迟"
+
                     desc="模拟每次按键之间的等待时间，越大越稳定，越小越快。"
                     control={
                       <SpinButton
@@ -147,6 +147,22 @@ export function SettingsDialog({
                         displayValue={`${profile.input_delay_millis} 毫秒`}
                         onChange={handleSpin(onChangeDelay, 0)}
                       />
+                    }
+                  />
+
+                  {/* 关键词管理：单一入口 = 选择窗口 */}
+                  <SettingRow
+                    label="目标窗口"
+                    desc="选择一个正在运行的窗口，作为本配置生效的关键词。"
+                    divider={false}
+                    control={
+                      <Button
+                        appearance="secondary"
+                        icon={<Search20Regular />}
+                        onClick={onPickWindow}
+                      >
+                        选择窗口…
+                      </Button>
                     }
                   />
 
@@ -165,70 +181,63 @@ export function SettingsDialog({
                       {foreground || "（读取中…）"}
                     </span>
                     {foreground && (
-                      <Badge
-                        appearance="tint"
-                        color={matchedByCurrent ? "success" : "informative"}
-                        size="small"
+                      <span
+                        className={styles.hkMuted}
+                        style={
+                          matchedByCurrent
+                            ? { color: tokens.colorPaletteGreenForeground1 }
+                            : undefined
+                        }
                       >
-                        {matchedByCurrent ? "本配置生效" : "未匹配本配置"}
-                      </Badge>
+                        {matchedByCurrent ? "已匹配" : "未匹配"}
+                      </span>
                     )}
                   </div>
 
-                  {/* 关键词管理：单一入口 = 选择窗口 */}
-                  <SettingRow
-                    label="目标窗口"
-                    desc="选择一个正在运行的窗口，作为本配置生效的关键词。"
-                    divider={false}
-                    control={
-                      <Button
-                        appearance="secondary"
-                        icon={<Search20Regular />}
-                        onClick={onPickWindow}
-                      >
-                        选择窗口…
-                      </Button>
-                    }
-                  />
+
 
                   {/* 已有关键词 */}
-                  <Caption1 className={styles.settingsGroupLabel}>
-                    已添加（{profile.window_keywords.length}）
-                  </Caption1>
-                  {profile.window_keywords.length === 0 ? (
-                    <div className={styles.emptyTagHint}>
-                      <Caption1>
-                        还没有关键词。该配置不会被任何窗口激活。
+                  <div className={styles.windowKeywords}>
+                    <div className={styles.windowKeywordsHeader}>
+                      <span className={styles.windowKeywordsTitle}>生效窗口</span>
+                      <Caption1 className={styles.hkMuted}>
+                        {profile.window_keywords.length} 个关键词
                       </Caption1>
                     </div>
-                  ) : (
-                    <div className={styles.tagGroup}>
-                      <TagGroup
-                        onDismiss={(_, d) => {
-                          const idx = Number(d.value);
-                          if (Number.isFinite(idx)) onRemoveKeyword(idx);
-                        }}
-                      >
-                        {profile.window_keywords.map((kw, i) => (
-                          <InteractionTag
-                            key={`${kw}-${i}`}
-                            value={String(i)}
-                            shape="rounded"
-                            appearance="outline"
-                          >
-                            <InteractionTagPrimary
-                              title={`包含匹配：${humanKeyword(kw)}`}
+                    {profile.window_keywords.length === 0 ? (
+                      <Caption1 className={styles.emptyTagHint}>
+                        还没有关键词。该配置不会被任何窗口激活。
+                      </Caption1>
+                    ) : (
+                      <div className={styles.windowKeywordTags}>
+                        <TagGroup
+                          onDismiss={(_, d) => {
+                            const idx = Number(d.value);
+                            if (Number.isFinite(idx)) onRemoveKeyword(idx);
+                          }}
+                        >
+                          {profile.window_keywords.map((kw, i) => (
+                            <InteractionTag
+                              key={`${kw}-${i}`}
+                              value={String(i)}
+                              shape="rounded"
+                              appearance="filled"
                             >
-                              {humanKeyword(kw)}
-                            </InteractionTagPrimary>
-                            <InteractionTagSecondary
-                              aria-label={`删除关键词 ${kw}`}
-                            />
-                          </InteractionTag>
-                        ))}
-                      </TagGroup>
-                    </div>
-                  )}
+                              <InteractionTagPrimary
+                                title={`包含匹配：${humanKeyword(kw)}`}
+                              >
+                                {humanKeyword(kw)}
+                              </InteractionTagPrimary>
+                              <InteractionTagSecondary
+                                aria-label={`删除关键词 ${kw}`}
+                              />
+                            </InteractionTag>
+                          ))}
+                        </TagGroup>
+                      </div>
+                    )}
+                  </div>
+
                 </>
               )}
 
