@@ -103,14 +103,6 @@ export const useStyles = makeStyles({
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground1,
   },
-  topBrand: {
-    fontSize: "13px",
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
-    paddingRight: "8px",
-    borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
-    marginRight: "4px",
-  },
   topBarSpacer: { flex: 1, minWidth: 0 },
 
   /* ================= 顶栏：daemon 状态灯按钮 ================= */
@@ -384,7 +376,7 @@ export const useStyles = makeStyles({
   },
   comboBadgeRecording: {
     animationName: {
-      "0%": { boxShadow: `0 0 0 0 ${tokens.colorPaletteRedBorder1}` },
+      "0%": { boxShadow: `0 0 0 0 ${tokens.colorBrandStroke1}` },
       "70%": { boxShadow: `0 0 0 6px transparent` },
       "100%": { boxShadow: `0 0 0 0 transparent` },
     },

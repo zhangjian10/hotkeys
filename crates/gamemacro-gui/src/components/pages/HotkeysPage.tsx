@@ -29,8 +29,6 @@ export interface HotkeysPageProps {
   onTry: (text: string) => void;
   onDuplicate: (i: number) => void;
   onDelete: (i: number) => void;
-  onMoveUp: (i: number) => void;
-  onMoveDown: (i: number) => void;
   /** 当 profile 没有窗口关键词时引导用户打开设置 Dialog */
   onGoWindow: () => void;
 }
@@ -53,8 +51,6 @@ export function HotkeysPage({
   onTry,
   onDuplicate,
   onDelete,
-  onMoveUp,
-  onMoveDown,
   onGoWindow,
 }: HotkeysPageProps) {
   const styles = useStyles();
@@ -132,7 +128,6 @@ export function HotkeysPage({
                 key={item.index}
                 hotkey={item.hotkey}
                 index={item.index}
-                total={profile.hotkeys.length}
                 expanded={isExpanded}
                 recording={recording && item.index === expandedIndex}
                 duplicate={isDuplicate}
@@ -143,8 +138,6 @@ export function HotkeysPage({
                 onTry={onTry}
                 onDuplicate={() => onDuplicate(item.index)}
                 onDelete={() => onDelete(item.index)}
-                onMoveUp={() => onMoveUp(item.index)}
-                onMoveDown={() => onMoveDown(item.index)}
               />
             );
           })}

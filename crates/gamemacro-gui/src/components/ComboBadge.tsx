@@ -46,9 +46,9 @@ function ComboBadgeBase({
 
   const color =
     state === "conflict"
-      ? "danger"
+      ? "warning"
       : state === "recording"
-        ? "warning"
+        ? "brand"
         : "brand";
 
   const className = [

@@ -17,8 +17,6 @@ import {
   Tooltip,
 } from "@fluentui/react-components";
 import {
-  ArrowDown20Regular,
-  ArrowUp20Regular,
   Copy20Regular,
   Delete20Regular,
   MoreHorizontal20Regular,
@@ -37,7 +35,6 @@ import { ComboBadge, type ComboBadgeState } from "./ComboBadge";
 export interface HotkeyCardProps {
   hotkey: HotkeyConfig;
   index: number;
-  total: number;
   expanded: boolean;
   recording: boolean;
   /** 是否与同 profile 内其它热键的组合键重复 */
@@ -50,8 +47,6 @@ export interface HotkeyCardProps {
   onTry: (text: string) => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
 }
 
 /**
@@ -63,7 +58,6 @@ export interface HotkeyCardProps {
 function HotkeyCardBase({
   hotkey,
   index,
-  total,
   expanded,
   recording,
   duplicate,
@@ -74,8 +68,6 @@ function HotkeyCardBase({
   onTry,
   onDuplicate,
   onDelete,
-  onMoveUp,
-  onMoveDown,
 }: HotkeyCardProps) {
   const styles = useStyles();
 
@@ -188,20 +180,6 @@ function HotkeyCardBase({
                 </MenuItem>
                 <MenuItem icon={<Copy20Regular />} onClick={onDuplicate}>
                   复制
-                </MenuItem>
-                <MenuItem
-                  icon={<ArrowUp20Regular />}
-                  onClick={onMoveUp}
-                  disabled={index === 0}
-                >
-                  上移
-                </MenuItem>
-                <MenuItem
-                  icon={<ArrowDown20Regular />}
-                  onClick={onMoveDown}
-                  disabled={index === total - 1}
-                >
-                  下移
                 </MenuItem>
                 <MenuItem icon={<Delete20Regular />} onClick={onDelete}>
                   删除

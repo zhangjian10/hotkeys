@@ -332,25 +332,6 @@ export default function App() {
     [recording, profile, cfg, activeProfile, flash],
   );
 
-  const moveHotkey = useCallback(
-    (from: number, to: number) => {
-      if (!profile) return;
-      if (to < 0 || to >= profile.hotkeys.length) return;
-      const next = [...profile.hotkeys];
-      const [item] = next.splice(from, 1);
-      if (!item) return;
-      next.splice(to, 0, item);
-      cfg.patchProfile(activeProfile, { hotkeys: next });
-      setExpandedHotkey((cur) => {
-        if (cur === from) return to;
-        if (from < cur && cur <= to) return cur - 1;
-        if (to <= cur && cur < from) return cur + 1;
-        return cur;
-      });
-    },
-    [profile, cfg, activeProfile],
-  );
-
   /* ------------------------- 杂项 ------------------------- */
   const reveal = useCallback(() => {
     revealConfig().catch((e) => flash("error", formatErr(e)));
@@ -415,8 +396,6 @@ export default function App() {
                 onTry={tryInput.start}
                 onDuplicate={duplicateHotkey}
                 onDelete={deleteHotkey}
-                onMoveUp={(i) => moveHotkey(i, i - 1)}
-                onMoveDown={(i) => moveHotkey(i, i + 1)}
                 onGoWindow={() => setSettingsOpen(true)}
               />
             </div>

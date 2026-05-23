@@ -131,8 +131,6 @@ export function TopBar({
 
   return (
     <header className={styles.topBar}>
-      <span className={styles.topBrand}>GameMacro</span>
-
       {renaming && current ? (
         <Input
           autoFocus
