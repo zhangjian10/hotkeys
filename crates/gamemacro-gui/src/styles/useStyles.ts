@@ -430,7 +430,7 @@ export const useStyles = makeStyles({
     whiteSpace: "nowrap",
   },
 
-  /* ================= "试一下" 倒计时 ================= */
+  /* ================= 「试一下」倒计时 ================= */
   countdownBox: {
     display: "flex",
     flexDirection: "column",
@@ -443,6 +443,35 @@ export const useStyles = makeStyles({
     fontWeight: tokens.fontWeightBold,
     color: tokens.colorBrandForeground1,
     lineHeight: 1,
+  },
+
+  /* ================= 录制组合键 Dialog ================= */
+  recorderBox: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    rowGap: "10px",
+    paddingBlock: "12px",
+  },
+  recorderDot: {
+    display: "flex",
+    alignItems: "center",
+    columnGap: "8px",
+    color: tokens.colorPaletteRedForeground1,
+    fontSize: "12.5px",
+  },
+  recorderLive: {
+    fontFamily: tokens.fontFamilyMonospace,
+    fontSize: "20px",
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorBrandForeground1,
+    paddingBlock: "16px",
+    paddingInline: "14px",
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px dashed ${tokens.colorBrandStroke1}`,
+    borderRadius: "8px",
+    textAlign: "center",
+    minHeight: "28px",
   },
 
   /* ================= 空状态（无 profile / 无 hotkey 搜索） ================= */

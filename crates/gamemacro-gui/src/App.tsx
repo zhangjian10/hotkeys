@@ -37,6 +37,7 @@ import { HotkeysPage } from "./components/pages/HotkeysPage";
 import { WindowPickerDialog } from "./components/WindowPickerDialog";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { CountdownDialog } from "./components/CountdownDialog";
+import { RecorderDialog } from "./components/RecorderDialog";
 
 interface ConfirmTask {
   label: string;
@@ -61,6 +62,8 @@ export default function App() {
   const [activeProfile, setActiveProfile] = useState(-1);
   /** 当前内联展开编辑的热键 index；-1 表示全部折叠 */
   const [expandedHotkey, setExpandedHotkey] = useState(-1);
+  /** 当前正在录制组合键的热键 index；-1 表示没有 */
+  const [recordingTarget, setRecordingTarget] = useState(-1);
   const [hotkeyQuery, setHotkeyQuery] = useState("");
   const [windowPickerOpen, setWindowPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -73,10 +76,15 @@ export default function App() {
   const recorder = useRecorder({
     flash,
     onCaptured: (combo) => {
-      cfg.patchHotkey(activeProfile, expandedHotkey, {
-        modifiers: combo.modifiers,
-        trigger_key: combo.trigger,
-      });
+      // recordingTarget 在 setRecordingTarget(-1) 之前还是有效值，可放心 patch
+      const idx = recordingTarget;
+      if (idx >= 0) {
+        cfg.patchHotkey(activeProfile, idx, {
+          modifiers: combo.modifiers,
+          trigger_key: combo.trigger,
+        });
+      }
+      setRecordingTarget(-1);
     },
   });
   const { recording, pendingModifiers } = recorder;
@@ -292,22 +300,36 @@ export default function App() {
       if (recording && i !== expandedHotkey) {
         // 切到别的卡片要先停止录制
         recorder.stop();
+        setRecordingTarget(-1);
       }
       setExpandedHotkey((cur) => (cur === i ? -1 : i));
     },
     [recording, expandedHotkey, recorder],
   );
 
-  /** 点击 ComboBadge：先确保该卡片处于展开态，再 toggle 录制 */
+  /** 点击 ComboBadge / 「重新录制」按钮：打开录制 Dialog 并启动录制器。
+   *  再次点击时（recording=true）= 取消录制并关闭 Dialog。 */
   const toggleRecordHotkey = useCallback(
     (i: number) => {
-      if (expandedHotkey !== i) {
-        setExpandedHotkey(i);
+      if (recording && recordingTarget === i) {
+        recorder.stop();
+        setRecordingTarget(-1);
+        return;
       }
-      recorder.toggle();
+      // 取消旧录制（如果在录别的）
+      if (recording) recorder.stop();
+      if (expandedHotkey !== i) setExpandedHotkey(i);
+      setRecordingTarget(i);
+      recorder.start();
     },
-    [expandedHotkey, recorder],
+    [recording, recordingTarget, recorder, expandedHotkey],
   );
+
+  /** Dialog 关闭按钮 / Esc 走这条路径 */
+  const cancelRecording = useCallback(() => {
+    recorder.stop();
+    setRecordingTarget(-1);
+  }, [recorder]);
 
   const patchHotkeyAt = useCallback(
     (i: number, patch: Partial<HotkeyConfig>) =>
@@ -470,6 +492,20 @@ export default function App() {
         open={!!tryInput.countdown}
         left={tryInput.countdown?.left ?? 0}
         onCancel={tryInput.cancel}
+      />
+
+      <RecorderDialog
+        open={recordingTarget >= 0}
+        pendingModifiers={pendingModifiers}
+        current={
+          recordingTarget >= 0 && profile?.hotkeys[recordingTarget]
+            ? {
+                modifiers: profile.hotkeys[recordingTarget].modifiers ?? [],
+                trigger: profile.hotkeys[recordingTarget].trigger_key,
+              }
+            : null
+        }
+        onCancel={cancelRecording}
       />
 
       <Toaster toasterId={toasterId} position="bottom-end" pauseOnHover />

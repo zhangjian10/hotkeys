@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use enigo::{Direction::Click, Enigo, Key, Keyboard, Settings};
+use enigo::{Enigo, Keyboard, Settings};
 use gamemacro_core::Config;
 use serde::Serialize;
 
@@ -107,17 +107,11 @@ fn current_foreground_title() -> Result<String, String> {
 /// 试一下：把 input_string 通过 enigo 敲到当前焦点窗口。
 ///
 /// 注意：调用前需要让用户切换到目标窗口（GUI 端通常配合一个倒计时）。
+/// 与 daemon 行为保持一致：原样输入，不自动加首尾回车。
 #[tauri::command]
 fn try_input(text: String) -> Result<(), String> {
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
-    // 与 daemon 行为保持一致：首尾各回车一次
-    enigo
-        .key(Key::Unicode('\n'), Click)
-        .map_err(|e| e.to_string())?;
     enigo.text(&text).map_err(|e| e.to_string())?;
-    enigo
-        .key(Key::Unicode('\n'), Click)
-        .map_err(|e| e.to_string())?;
     Ok(())
 }
 

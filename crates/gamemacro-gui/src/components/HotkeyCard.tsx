@@ -148,21 +148,19 @@ function HotkeyCardBase({
       onKeyDown={handleKeyDown}
       aria-expanded={expanded}
     >
-      {/* ============ 折叠态主行（展开时仍保留作头部，但 ComboBadge 移到展开体内避免重复） ============ */}
+      {/* ============ 折叠态主行（展开时仍保留作头部） ============ */}
       <div className={styles.hkCardHead}>
-        {!expanded && (
-          <span data-stop-card>
-            <ComboBadge
-              modifiers={modifiers}
-              triggerKey={hotkey.trigger_key}
-              state={badgeState}
-              pendingModifiers={pendingModifiers}
-              conflictHint={conflictHint}
-              onClick={onToggleRecord}
-              size="large"
-            />
-          </span>
-        )}
+        <span data-stop-card>
+          <ComboBadge
+            modifiers={modifiers}
+            triggerKey={hotkey.trigger_key}
+            state={badgeState}
+            pendingModifiers={pendingModifiers}
+            conflictHint={conflictHint}
+            onClick={onToggleRecord}
+            size="large"
+          />
+        </span>
 
         <div className={styles.hkCardText}>
           <span className={styles.hkCardTitle}>
@@ -242,7 +240,7 @@ function HotkeyCardBase({
             />
           </Field>
 
-          <Field label="输入内容" hint="支持多行；换行 = 游戏内 Enter。">
+          <Field label="输入内容" hint="按你输入的字符原样发送。需要回车请直接在文本里换行。">
             <Textarea
               value={hotkey.input_string}
               disabled={recording}
