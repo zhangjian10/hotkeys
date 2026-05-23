@@ -12,7 +12,7 @@ export interface HotkeyConfig {
   trigger_key: string;
   input_string: string;
   description: string | null;
-  /** 按一次开始循环输入、再按一次停止；缺省 true（与 daemon 默认一致）。 */
+  /** 按一次开始循环输入、再按一次停止；缺省 true（与 engine 默认一致）。 */
   repeat?: boolean;
   /** 覆盖此条热键专属的循环间隔（秒）。null/undefined 时使用 profile 的 auto_input_interval_secs。 */
   interval_secs_override?: number | null;
@@ -131,32 +131,41 @@ export async function tryInput(text: string): Promise<void> {
 }
 
 /* ============================================================================
- * Daemon IPC（命名管道经由 Tauri 命令转发）
+ * Engine 状态 / 控制（进程内直调，无 IPC）
+ *
+ * 整合前 daemon 是独立进程，整合后 engine 与 GUI 同进程：
+ * - engine 与 GUI 同进程，所有 invoke 都是直接函数调用
+ * - 不再有 "running" 概念（进程要么活着要么挂了，挂了 GUI 也一并退出）
+ * - 新增 enabled：用户开关，运行时可 toggle 而无需重启
  * ========================================================================== */
 
-export interface DaemonStatus {
-  running: boolean;
+export interface EngineStatus {
+  /** 命中某 profile（窗口聚焦匹配） */
   active: boolean;
+  /** 用户开关：是否启用热键监听 */
+  enabled: boolean;
+  /** 激活的 profile 名 */
   profile: string | null;
-  pid: number | null;
+  /** 激活的 profile 在 profiles 数组中的索引 */
+  profile_index: number | null;
 }
 
-/** 查询后端状态。失败也总是 resolve（值为 not running），便于轮询。 */
-export async function daemonStatus(): Promise<DaemonStatus> {
-  return invoke<DaemonStatus>("daemon_status");
+/** 查询 engine 状态。同进程直调，不会失败 —— 用 try/catch 兜底纯属保险。 */
+export async function engineStatus(): Promise<EngineStatus> {
+  return invoke<EngineStatus>("engine_status");
 }
 
-/** 发 STOP 指令请求 daemon 退出。 */
-export async function daemonStop(): Promise<void> {
-  await invoke("daemon_stop");
+/** 启用 / 禁用热键监听（运行时开关，不影响进程生命周期） */
+export async function setEngineEnabled(enabled: boolean): Promise<void> {
+  await invoke("set_engine_enabled", { enabled });
 }
 
-/** 启动后端：ShellExecute runas，会触发 UAC。 */
-export async function daemonSpawn(): Promise<void> {
-  await invoke("daemon_spawn");
+/** 同步读 enabled（极少需要，通常用 engineStatus 一次拿全） */
+export async function engineEnabled(): Promise<boolean> {
+  return invoke<boolean>("engine_enabled");
 }
 
-/** 在资源管理器中打开 daemon 日志文件位置。 */
+/** 在资源管理器中打开日志文件位置：`%LOCALAPPDATA%\GameMacro\gamemacro.log` */
 export async function revealLog(): Promise<void> {
   await invoke("reveal_log");
 }
@@ -175,7 +184,7 @@ export function emptyConfig(): AppConfig {
   return { profiles: [] };
 }
 
-/** 新建一条空热键（默认 repeat=true，与 daemon 历史行为一致）。 */
+/** 新建一条空热键（默认 repeat=true，与 engine 历史行为一致）。 */
 export function emptyHotkey(): HotkeyConfig {
   return {
     modifiers: ["Ctrl"],

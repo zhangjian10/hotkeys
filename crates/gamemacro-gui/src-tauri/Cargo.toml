@@ -2,7 +2,7 @@
 name = "gamemacro-gui"
 version = "0.1.0"
 edition = "2024"
-description = "GameMacro 配置 GUI（Tauri v2 + React + Fluent UI v9）"
+description = "GameMacro 单进程 GUI（Tauri v2 + React + Fluent UI v9 + 内嵌 engine）"
 
 [[bin]]
 name = "gamemacro"
@@ -15,29 +15,24 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
 gamemacro-core = { path = "../../gamemacro-core" }
+# 整合后：engine 作为 lib 直接编进 GUI 进程，不再有独立 daemon binary。
+gamemacro-engine = { path = "../../gamemacro-engine" }
 
 # Tauri v2 核心；当前应用只用 invoke 命令 + 标准窗口行为，无需任何插件
 tauri = { version = "2", features = [] }
 
 serde = { version = "1", features = ["derive"] }
 
-# 用于"试一下"功能：把 input_string 模拟敲到当前焦点窗口（与 daemon 同款）
+# 用于"试一下"功能：把 input_string 模拟敲到当前焦点窗口（与 engine 同款）
 enigo = { version = "0.6.1", default-features = false }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = [
-    "winuser",
-    "windef",
-    "minwindef",
-    "namedpipeapi",
-    "fileapi",
-    "winbase",
-    "handleapi",
-    "winnt",
-    "winerror",
-    "errhandlingapi",
-    "shellapi",
-] }
+# IPC / spawn-elevated 已删，winapi feature 收窄到只剩窗口枚举所需。
+winapi = { version = "0.3", features = ["winuser", "windef", "minwindef"] }
 
 [build-dependencies]
+# tauri-build 自带 Windows manifest 注入。release build 时我们通过
+# WindowsAttributes::app_manifest 覆盖默认 manifest 加上 requireAdministrator
+# —— 不再使用 winres / embed-resource，避免与 tauri-build 内嵌资源冲突
+# （CVTRES CVT1100 duplicate resource）。
 tauri-build = { version = "2", features = [] }

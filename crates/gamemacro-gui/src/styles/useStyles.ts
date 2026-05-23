@@ -105,7 +105,7 @@ export const useStyles = makeStyles({
   },
   topBarSpacer: { flex: 1, minWidth: 0 },
 
-  /* ================= 顶栏：daemon 状态灯按钮 ================= */
+  /* ================= 顶栏：engine 状态灯按钮 ================= */
   statusBtn: {
     display: "inline-flex",
     alignItems: "center",

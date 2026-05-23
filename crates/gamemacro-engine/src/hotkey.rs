@@ -1,4 +1,3 @@
-use crate::log_info;
 use crate::loop_runtime::LoopHandle;
 use crate::state::AppState;
 use gamemacro_core::{HotkeyConfig, Profile, string_to_rdev_key};
@@ -23,6 +22,10 @@ pub struct HotkeyManager;
 
 impl HotkeyManager {
     pub fn handle_key_event(event: Event) {
+        // 用户开关：禁用时彻底短路。重新启用后自然恢复（cancel_all 已在 set_enabled 触发）。
+        if !AppState::is_enabled() {
+            return;
+        }
         if !AppState::is_active() {
             return;
         }

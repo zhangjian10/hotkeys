@@ -4,8 +4,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import {
   type HotkeyConfig,
-  daemonSpawn,
-  daemonStop,
   emptyHotkey,
   emptyProfile,
   loadConfig,
@@ -22,7 +20,7 @@ import { useConfigState } from "./hooks/useConfigState";
 import { useFlash } from "./hooks/useFlash";
 import { useTryInput } from "./hooks/useTryInput";
 import { useRecorder } from "./hooks/useRecorder";
-import { useDaemonStatus } from "./hooks/useDaemonStatus";
+import { useEngineStatus } from "./hooks/useEngineStatus";
 import {
   useActiveProfile,
   useVisibleHotkeys,
@@ -44,7 +42,7 @@ interface ConfirmTask {
   apply: () => void;
 }
 
-/** autosave 防抖延迟。daemon 也以 500ms 防抖，整体最多 1s 内反映变更。 */
+/** autosave 防抖延迟。engine 配置 watcher 也以 500ms 防抖，整体最多 1s 内反映变更。 */
 const SAVE_DEBOUNCE_MS = 500;
 
 const APP_VERSION = "0.1.0";
@@ -387,17 +385,21 @@ export default function App() {
     revealConfig().catch((e) => flash("error", formatErr(e)));
   }, [flash]);
 
-  /* ------------------------- Daemon 状态 / 控制 ------------------------- */
-  const daemon = useDaemonStatus();
-  const onSpawnDaemon = useCallback(() => {
-    void daemonSpawn().catch((e) => flash("error", formatErr(e)));
-  }, [flash]);
-  const onStopDaemon = useCallback(() => {
-    void daemonStop().catch((e) => flash("error", formatErr(e)));
-  }, [flash]);
+  /* ------------------------- Engine 状态 / 控制 ------------------------- */
+  const { status: engine, setEnabled: setEngineEnabledOptimistic } =
+    useEngineStatus();
   const onRevealLog = useCallback(() => {
     void revealLog().catch((e) => flash("error", formatErr(e)));
   }, [flash]);
+  const onSetEnabled = useCallback(
+    (enabled: boolean) => {
+      // hook 内部已做乐观更新 + 失败回滚；这里只负责把异常 toast 出去
+      void setEngineEnabledOptimistic(enabled).catch((e) =>
+        flash("error", formatErr(e)),
+      );
+    },
+    [flash, setEngineEnabledOptimistic],
+  );
 
   const onChangeInterval = useCallback(
     (v: number) => cfg.patchProfile(activeProfile, { auto_input_interval_secs: v }),
@@ -421,9 +423,8 @@ export default function App() {
         onDuplicateCurrent={duplicateCurrentProfile}
         onDeleteCurrent={deleteCurrentProfile}
         onOpenSettings={() => setSettingsOpen(true)}
-        daemon={daemon}
-        onSpawnDaemon={onSpawnDaemon}
-        onStopDaemon={onStopDaemon}
+        engine={engine}
+        onSetEnabled={onSetEnabled}
         onRevealLog={onRevealLog}
       />
 
@@ -466,6 +467,9 @@ export default function App() {
         onChangeDelay={onChangeDelay}
         onRemoveKeyword={removeKeyword}
         onPickWindow={() => setWindowPickerOpen(true)}
+        engineEnabled={engine?.enabled ?? true}
+        onSetEngineEnabled={onSetEnabled}
+        onRevealLog={onRevealLog}
         onRevealConfig={reveal}
       />
 

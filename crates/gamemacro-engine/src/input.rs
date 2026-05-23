@@ -1,4 +1,3 @@
-use crate::log_error;
 use enigo::{Enigo, Keyboard, Settings};
 
 pub struct InputManager {

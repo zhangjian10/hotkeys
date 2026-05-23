@@ -17,6 +17,7 @@ import {
   MenuList,
   MenuPopover,
   MenuTrigger,
+  Switch,
   Tooltip,
   mergeClasses,
 } from "@fluentui/react-components";
@@ -27,12 +28,10 @@ import {
   Dismiss20Regular,
   DocumentBulletList20Regular,
   Edit20Regular,
-  Play20Regular,
   Settings20Regular,
-  Stop20Regular,
 } from "@fluentui/react-icons";
 
-import type { DaemonStatus, Profile } from "../lib/api";
+import type { EngineStatus, Profile } from "../lib/api";
 import { useStyles } from "../styles/useStyles";
 
 export interface TopBarProps {
@@ -45,18 +44,19 @@ export interface TopBarProps {
   onDeleteCurrent: () => void;
   onOpenSettings: () => void;
 
-  /** daemon 状态；null 表示首次轮询尚未完成。 */
-  daemon: DaemonStatus | null;
-  onSpawnDaemon: () => void;
-  onStopDaemon: () => void;
+  /** engine 状态；null 表示首次轮询尚未完成。 */
+  engine: EngineStatus | null;
+  /** 切换"启用热键监听"开关 */
+  onSetEnabled: (enabled: boolean) => void;
+  /** 在资源管理器中打开日志文件 */
   onRevealLog: () => void;
 }
 
-type DotState = "running" | "inactive" | "down" | "checking";
+type DotState = "running" | "inactive" | "disabled" | "checking";
 
-function dotState(s: DaemonStatus | null): DotState {
+function dotState(s: EngineStatus | null): DotState {
   if (s === null) return "checking";
-  if (!s.running) return "down";
+  if (!s.enabled) return "disabled";
   return s.active ? "running" : "inactive";
 }
 
@@ -64,8 +64,8 @@ function dotLabel(state: DotState, profile: string | null): string {
   switch (state) {
     case "checking":
       return "检查中…";
-    case "down":
-      return "后端未运行";
+    case "disabled":
+      return "已禁用";
     case "inactive":
       return "等待目标窗口";
     case "running":
@@ -86,16 +86,16 @@ export function TopBar({
   onDuplicateCurrent,
   onDeleteCurrent,
   onOpenSettings,
-  daemon,
-  onSpawnDaemon,
-  onStopDaemon,
+  engine,
+  onSetEnabled,
   onRevealLog,
 }: TopBarProps) {
   const styles = useStyles();
   const current = profiles[activeProfile];
   const canDelete = profiles.length > 1;
-  const state = dotState(daemon);
-  const label = dotLabel(state, daemon?.profile ?? null);
+  const state = dotState(engine);
+  const label = dotLabel(state, engine?.profile ?? null);
+  const enabled = engine?.enabled ?? true;
 
   // 「+ 新游戏」mini Dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -279,26 +279,26 @@ export function TopBar({
                 styles.statusDot,
                 state === "running" && styles.statusDotRunning,
                 state === "inactive" && styles.statusDotInactive,
-                state === "down" && styles.statusDotDown,
+                state === "disabled" && styles.statusDotDown,
               )}
             />
             {label}
           </MenuButton>
         </MenuTrigger>
         <MenuPopover>
-          <div className={styles.statusMenuHeader}>
-            {daemon?.pid ? `PID ${daemon.pid}` : "GameMacro 后端服务"}
-          </div>
+          <div className={styles.statusMenuHeader}>GameMacro 引擎</div>
           <MenuList>
-            {state === "down" ? (
-              <MenuItem icon={<Play20Regular />} onClick={onSpawnDaemon}>
-                启动后端（需要管理员权限）
-              </MenuItem>
-            ) : (
-              <MenuItem icon={<Stop20Regular />} onClick={onStopDaemon}>
-                停止后端
-              </MenuItem>
-            )}
+            <MenuItem
+              persistOnClick
+              // 让点击 Switch 时不立刻关闭菜单
+              onClick={(e) => e.preventDefault()}
+            >
+              <Switch
+                label="启用热键监听"
+                checked={enabled}
+                onChange={(_, d) => onSetEnabled(d.checked)}
+              />
+            </MenuItem>
             <MenuDivider />
             <MenuItem icon={<DocumentBulletList20Regular />} onClick={onRevealLog}>
               打开日志位置

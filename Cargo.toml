@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "crates/gamemacro-core",
-    "crates/gamemacro-daemon",
+    "crates/gamemacro-engine",
     "crates/gamemacro-gui/src-tauri",
 ]
 resolver = "2"

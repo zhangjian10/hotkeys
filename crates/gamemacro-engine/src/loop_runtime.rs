@@ -8,7 +8,6 @@
 //! - 单次输入（repeat=false）：调用 `submit_once()` 直接发一条到 worker，不起 task
 
 use crate::input::InputManager;
-use crate::log_error;
 use std::sync::mpsc as std_mpsc;
 use std::thread;
 use std::time::Duration;

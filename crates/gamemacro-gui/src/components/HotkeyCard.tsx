@@ -76,7 +76,7 @@ function HotkeyCardBase({
 }: HotkeyCardProps) {
   const styles = useStyles();
 
-  // repeat 字段缺省视为 true（与 daemon serde default 对齐）
+  // repeat 字段缺省视为 true（与 engine serde default 对齐）
   const repeat = hotkey.repeat !== false;
 
   // 兼容历史数据：modifiers 可能为 undefined（极旧的内存对象）。

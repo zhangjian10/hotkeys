@@ -13,6 +13,7 @@ import {
   InteractionTagSecondary,
   SpinButton,
   type SpinButtonOnChangeData,
+  Switch,
   Tab,
   TabList,
   type TabValue,
@@ -21,6 +22,7 @@ import {
 } from "@fluentui/react-components";
 import {
   Dismiss20Regular,
+  DocumentBulletList20Regular,
   FolderOpen20Regular,
   Search20Regular,
   Timer20Regular,
@@ -43,6 +45,10 @@ export interface SettingsDialogProps {
   onChangeDelay: (v: number) => void;
   onRemoveKeyword: (i: number) => void;
   onPickWindow: () => void;
+  /* 全局 tab：engine 开关 + 日志 */
+  engineEnabled: boolean;
+  onSetEngineEnabled: (enabled: boolean) => void;
+  onRevealLog: () => void;
   /* 关于 tab */
   onRevealConfig: () => void;
 }
@@ -65,6 +71,9 @@ export function SettingsDialog({
   onChangeDelay,
   onRemoveKeyword,
   onPickWindow,
+  engineEnabled,
+  onSetEngineEnabled,
+  onRevealLog,
   onRevealConfig,
 }: SettingsDialogProps) {
   const styles = useStyles();
@@ -228,12 +237,32 @@ export function SettingsDialog({
               )}
 
               {tab === "global" && (
-                <SettingRow
-                  label="Daemon 运行中"
-                  desc="后续版本：从 GUI 直接启停 daemon。当前可在顶栏右上角操作。"
-                  divider={false}
-                  control={<Caption1>即将推出</Caption1>}
-                />
+                <>
+                  <SettingRow
+                    label="启用热键监听"
+                    desc="关闭后，所有热键不再触发；不影响 GUI 配置编辑。"
+                    control={
+                      <Switch
+                        checked={engineEnabled}
+                        onChange={(_, d) => onSetEngineEnabled(d.checked)}
+                      />
+                    }
+                  />
+                  <SettingRow
+                    label="日志文件"
+                    desc="位于 %LOCALAPPDATA%\GameMacro\gamemacro.log。"
+                    divider={false}
+                    control={
+                      <Button
+                        appearance="secondary"
+                        icon={<DocumentBulletList20Regular />}
+                        onClick={onRevealLog}
+                      >
+                        打开日志文件
+                      </Button>
+                    }
+                  />
+                </>
               )}
 
               {tab === "about" && (

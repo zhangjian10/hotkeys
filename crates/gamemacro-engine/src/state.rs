@@ -1,4 +1,3 @@
-use crate::log_info;
 use crate::loop_runtime::LoopRuntime;
 use gamemacro_core::{Config, Profile};
 use lazy_static::lazy_static;
@@ -11,9 +10,10 @@ use std::{
     },
 };
 
-/// 给 IPC 接口用的状态快照。
+/// 给 GUI 接口用的状态快照。
 pub struct StateSnapshot {
     pub active: bool,
+    pub enabled: bool,
     pub profile_name: Option<String>,
     pub profile_index: Option<usize>,
 }
@@ -30,6 +30,9 @@ lazy_static! {
 
     // 全局配置
     pub static ref CONFIG: Mutex<Config> = Mutex::new(Config::default());
+
+    // 用户开关：是否启用热键监听（false 时 hotkey 回调短路，且 cancel_all）
+    pub static ref ENABLED: AtomicBool = AtomicBool::new(true);
 }
 
 /// 全局唯一的 LoopRuntime。daemon 启动时通过 `init_loop_runtime` 注入；
@@ -41,6 +44,14 @@ pub struct AppState;
 impl AppState {
     pub fn is_active() -> bool {
         WARCRAFT_ACTIVE.load(Ordering::SeqCst)
+    }
+
+    pub fn is_enabled() -> bool {
+        ENABLED.load(Ordering::SeqCst)
+    }
+
+    pub fn set_enabled(enabled: bool) {
+        ENABLED.store(enabled, Ordering::SeqCst);
     }
 
     pub fn set_active(active: bool) {
@@ -117,9 +128,10 @@ impl AppState {
         *global_config = config;
     }
 
-    /// 给 IPC 用的轻量快照：当前是否激活、激活的 profile 名/索引。
+    /// 给 GUI 用的轻量快照：当前是否启用 / 是否激活 / 激活的 profile 名/索引。
     pub fn snapshot() -> StateSnapshot {
         let active = WARCRAFT_ACTIVE.load(Ordering::SeqCst);
+        let enabled = ENABLED.load(Ordering::SeqCst);
         let idx_raw = ACTIVE_PROFILE_INDEX.load(Ordering::SeqCst);
         let (profile_name, profile_index) = if idx_raw < 0 {
             (None, None)
@@ -133,12 +145,13 @@ impl AppState {
         };
         StateSnapshot {
             active,
+            enabled,
             profile_name,
             profile_index,
         }
     }
 
-    /// 在 daemon 启动时调用一次。重复调用会返回错误。
+    /// 在 engine 启动时调用一次。重复调用会返回错误。
     pub fn init_loop_runtime() -> std::io::Result<()> {
         let rt = LoopRuntime::new()?;
         LOOP_RUNTIME

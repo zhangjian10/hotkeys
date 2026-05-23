@@ -1,11 +1,11 @@
 [package]
-name = "gamemacro-daemon"
+name = "gamemacro-engine"
 version = "0.1.0"
 edition = "2024"
+description = "GameMacro 后台引擎：全局热键监听 + 循环输入 + 窗口检测，由 GUI 在进程内启动。"
 
-[[bin]]
-name = "gamemacro-daemon"
-path = "src/main.rs"
+# 不再产 binary —— 进程入口由 gamemacro-gui 提供。
+# 默认 [lib] 即可（rlib），无需显式写出 crate-type。
 
 [dependencies]
 gamemacro-core = { path = "../gamemacro-core" }
@@ -15,21 +15,15 @@ notify = "8.2.0"
 rdev = { version = "0.5.2", default-features = false }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "sync", "time", "macros"] }
 tokio-util = { version = "0.7", default-features = false }
+
+[target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3.9", features = [
+    # window detection (window.rs)
+    "winuser",
+    "windef",
+    "minwindef",
+    # 仍由 logging / state 间接需要
     "handleapi",
-    "securitybaseapi",
     "processthreadsapi",
     "winnt",
-    "namedpipeapi",
-    "fileapi",
-    "winbase",
-    "minwindef",
-    "winerror",
-    "errhandlingapi",
 ] }
-
-[build-dependencies]
-winres = "0.1.12"
-
-[package.metadata.winres]
-manifest = "app.manifest"

@@ -1,11 +1,11 @@
-//! 极简文件日志：%LOCALAPPDATA%\GameMacro\daemon.log
+//! 极简文件日志：%LOCALAPPDATA%\GameMacro\gamemacro.log
 //!
 //! 设计要点：
 //! - 零外部依赖，仅 std
 //! - OnceLock<Mutex<File>>：进程内全局单例，所有调用串行追加
-//! - 1 MiB 大小阈值滚动一次到 daemon.log.1（旧 .1 被覆盖）
+//! - 1 MiB 大小阈值滚动一次到 gamemacro.log.1（旧 .1 被覆盖）
 //! - debug build 同时镜像到 stdout/stderr，方便 cargo run 时看
-//! - init 失败时不 panic：日志写入会变成 no-op，daemon 继续工作
+//! - init 失败时不 panic：日志写入会变成 no-op，engine 继续工作
 
 use std::fs::{File, OpenOptions};
 use std::io::Write;
@@ -18,7 +18,7 @@ const MAX_LOG_BYTES: u64 = 1024 * 1024;
 static LOG_FILE: OnceLock<Mutex<File>> = OnceLock::new();
 static LOG_PATH: OnceLock<PathBuf> = OnceLock::new();
 
-/// daemon 启动时调用一次。失败 = 静默降级为 no-op。
+/// engine 启动时调用一次。失败 = 静默降级为 no-op。
 pub fn init() {
     let Some(path) = resolve_log_path() else {
         return;
@@ -40,8 +40,7 @@ pub fn init() {
     }
 }
 
-/// 当前日志文件路径（init 成功后才有）。供后续 4-B 暴露给 GUI。
-#[allow(dead_code)]
+/// 当前日志文件路径（init 成功后才有）。GUI 通过它实现「打开日志文件」。
 pub fn log_path() -> Option<&'static PathBuf> {
     LOG_PATH.get()
 }
@@ -50,7 +49,7 @@ fn resolve_log_path() -> Option<PathBuf> {
     let base = std::env::var_os("LOCALAPPDATA")?;
     let mut p = PathBuf::from(base);
     p.push("GameMacro");
-    p.push("daemon.log");
+    p.push("gamemacro.log");
     Some(p)
 }
 
