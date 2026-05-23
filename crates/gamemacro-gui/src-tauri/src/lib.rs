@@ -212,6 +212,25 @@ fn foreground_title_impl() -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            // 兜底：窗口启动时 visible:false，由前端在首屏 paint 后 show()。
+            // 万一前端因任何原因（权限缺失 / JS 异常 / loadConfig 死循环）没能调用 show，
+            // 这里 3s 后强制把主窗口显示出来，避免"进程在跑但界面永不出现"。
+            use tauri::Manager;
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                if let Some(win) = handle.get_webview_window("main") {
+                    if let Ok(visible) = win.is_visible() {
+                        if !visible {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                    }
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             load_config,
             save_config,
